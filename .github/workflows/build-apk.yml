@@ -1,0 +1,139 @@
+name: Build DilPusula Flutter Prototype
+
+on:
+  push:
+    branches:
+      - flutter-dilpusula-prototype-20260720
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract application source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat \
+            source_parts/part_00 \
+            source_parts/part_01 \
+            source_parts/part_02 \
+            source_parts/part_03 \
+            source_parts/part_04 \
+            source_parts/part_05 \
+            source_parts/part_06_00 \
+            source_parts/part_06_01 \
+            source_parts/part_06_02 \
+            source_parts/part_06_03 \
+            source_parts/part_07 \
+            | base64 --decode > dilpusula_app_source.tar.gz
+          gzip -t dilpusula_app_source.tar.gz
+          tar -xzf dilpusula_app_source.tar.gz
+          test -f app_source/pubspec.yaml
+          test -f app_source/lib/main.dart
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.0'
+          channel: stable
+          cache: true
+
+      - name: Create Android project shell
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Flutter 3.44 treats duplicate wildcard parameter names as an error.
+          # Apply the source-level compatibility fix before packaging deliverables.
+          sed -i 's/separatorBuilder: (_, _) => const SizedBox(height: 10)/separatorBuilder: (_, __) => const SizedBox(height: 10)/' \
+            app_source/lib/src/student.dart
+
+          rm -rf build_project
+          flutter create \
+            --platforms=android \
+            --org com.dilpusula \
+            --project-name dilpusula \
+            build_project
+          rm -rf build_project/test
+          rm -rf build_project/lib
+          cp -R app_source/lib build_project/
+          cp app_source/pubspec.yaml build_project/
+          cp app_source/analysis_options.yaml build_project/
+          cp app_source/README.md build_project/
+          sed -i 's/android:label="dilpusula"/android:label="DilPusula"/' build_project/android/app/src/main/AndroidManifest.xml
+
+          for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            base64 --decode "app_source/tooling/ic_launcher_${density}.png.b64" \
+              > "build_project/android/app/src/main/res/mipmap-${density}/ic_launcher.png"
+          done
+
+      - name: Install dependencies
+        working-directory: build_project
+        run: flutter pub get
+
+      - name: Format source
+        working-directory: build_project
+        run: dart format lib
+
+      - name: Analyze
+        working-directory: build_project
+        shell: bash
+        run: |
+          set -o pipefail
+          flutter analyze --no-fatal-infos --no-fatal-warnings 2>&1 | tee ../analyze.log
+
+      - name: Build release APK
+        working-directory: build_project
+        shell: bash
+        run: |
+          set -o pipefail
+          flutter build apk --release 2>&1 | tee ../build.log
+
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dilpusula-build-diagnostics
+          path: |
+            analyze.log
+            build.log
+          if-no-files-found: warn
+          retention-days: 3
+
+      - name: Prepare deliverables
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p deliverables
+          cp build_project/build/app/outputs/flutter-apk/app-release.apk \
+            deliverables/DilPusula-Prototip.apk
+          rm -rf build_project/build build_project/.dart_tool
+          cd build_project
+          zip -q -r ../deliverables/DilPusula-Flutter-Kaynak-Kodu.zip . \
+            -x '.git/*' '*.iml' '.idea/*' 'android/.gradle/*'
+
+      - name: Upload deliverables
+        uses: actions/upload-artifact@v4
+        with:
+          name: dilpusula-prototype-deliverables
+          path: deliverables/
+          if-no-files-found: error
+          retention-days: 7
