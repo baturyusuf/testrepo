@@ -1,0 +1,100 @@
+name: Build DilPusula Flutter Prototype
+
+on:
+  push:
+    branches:
+      - flutter-dilpusula-prototype-20260720
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract application source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat source_parts/part_* | base64 --decode | tar -xz
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.0'
+          channel: stable
+          cache: true
+
+      - name: Create Android project shell
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf build_project
+          flutter create \
+            --platforms=android \
+            --org com.dilpusula \
+            --project-name dilpusula \
+            build_project
+          rm -rf build_project/test
+          rm -rf build_project/lib
+          cp -R app_source/lib build_project/
+          cp app_source/pubspec.yaml build_project/
+          cp app_source/analysis_options.yaml build_project/
+          cp app_source/README.md build_project/
+          sed -i 's/android:label="dilpusula"/android:label="DilPusula"/' build_project/android/app/src/main/AndroidManifest.xml
+
+          for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            base64 --decode "app_source/tooling/ic_launcher_${density}.png.b64" \
+              > "build_project/android/app/src/main/res/mipmap-${density}/ic_launcher.png"
+          done
+
+      - name: Install dependencies
+        working-directory: build_project
+        run: flutter pub get
+
+      - name: Format source
+        working-directory: build_project
+        run: dart format lib
+
+      - name: Analyze
+        working-directory: build_project
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Build release APK
+        working-directory: build_project
+        run: flutter build apk --release
+
+      - name: Prepare deliverables
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p deliverables
+          cp build_project/build/app/outputs/flutter-apk/app-release.apk \
+            deliverables/DilPusula-Prototip.apk
+          rm -rf build_project/build build_project/.dart_tool
+          cd build_project
+          zip -q -r ../deliverables/DilPusula-Flutter-Kaynak-Kodu.zip . \
+            -x '.git/*' '*.iml' '.idea/*' 'android/.gradle/*'
+
+      - name: Upload deliverables
+        uses: actions/upload-artifact@v4
+        with:
+          name: dilpusula-prototype-deliverables
+          path: deliverables/
+          if-no-files-found: error
+          retention-days: 7
