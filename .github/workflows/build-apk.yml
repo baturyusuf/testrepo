@@ -25,7 +25,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat source_parts/part_* | base64 --decode | tar -xz
+          cat \
+            source_parts/part_00 \
+            source_parts/part_01 \
+            source_parts/part_02 \
+            source_parts/part_03 \
+            source_parts/part_04 \
+            source_parts/part_05 \
+            source_parts/part_06_00 \
+            source_parts/part_06_01 \
+            source_parts/part_06_02 \
+            source_parts/part_06_03 \
+            source_parts/part_07 \
+            | base64 --decode > dilpusula_app_source.tar.gz
+          gzip -t dilpusula_app_source.tar.gz
+          tar -xzf dilpusula_app_source.tar.gz
+          test -f app_source/pubspec.yaml
+          test -f app_source/lib/main.dart
 
       - name: Set up Java
         uses: actions/setup-java@v4
