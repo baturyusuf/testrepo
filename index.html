@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#111b35" />
+  <meta name="description" content="OBS öğrenci listelerinden Excel ve PDF ders yoklaması oluşturun. Dosyalar tarayıcınızda işlenir." />
+  <title>Yoklama Oluşturucu · Rumeli</title>
+  <link rel="stylesheet" href="./assets/app.css" />
+  <link rel="stylesheet" href="./assets/pdf.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <a class="brand" href="./" aria-label="Yoklama Oluşturucu ana sayfa"><span class="brand-symbol">Y<span>·</span></span><span><b>YOKLAMA</b><small>OLUŞTURUCU</small></span></a>
+      <div class="side-label">ÇALIŞMA ALANI</div>
+      <div class="side-nav active"><span class="nav-icon">▦</span> Yeni yoklama <span class="nav-mark"></span></div>
+      <div class="sidebar-info"><span class="privacy-dot"></span><b>Yerel veri işleme</b><p>Öğrenci listeleri bir sunucuya gönderilmez. Dosyalar bu tarayıcıda işlenir.</p></div>
+      <div class="sidebar-foot"><span>İstanbul Rumeli Üniversitesi</span><small>2026–2027 · Ders yoklama aracı</small></div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar"><span><span class="breadcrumb">Araçlar</span><span class="slash">/</span> Yoklama oluştur</span><span class="top-pill"><span></span> Tarayıcıda çalışır</span></header>
+      <div class="content">
+        <div class="intro"><div class="eyebrow">DERS YÖNETİMİ <span> / </span> 01</div><h1>Yoklama listesi oluşturun<span>.</span></h1><p>OBS öğrenci listelerinizi yükleyin; imza sayısını ve ders bilgilerini seçin. Excel ve yazdırılabilir A4 PDF dosyalarınızı tek seferde hazırlayın.</p></div>
+        <div class="progress-path"><span class="step on"><span class="step-num">1</span>Dosyalar</span><span class="step-line"></span><span class="step"><span class="step-num">2</span>Ders bilgileri</span><span class="step-line"></span><span class="step"><span class="step-num">3</span>Çıktılar</span></div>
+
+        <section class="card" aria-labelledby="upload-title">
+          <div class="card-head"><div><span class="section-index">01 <span> / GİRDİ</span></span><h2 id="upload-title">OBS öğrenci listeleri</h2><p>Birden fazla şube dosyası yükleyebilirsiniz.</p></div><span class="file-chip">.XLSX</span></div>
+          <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Excel dosyalarını seçin veya sürükleyip bırakın"><input id="file-input" type="file" accept=".xlsx" multiple hidden><span class="upload-graphic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" stroke-linecap="round" stroke-linejoin="round"/></svg></span><b>Excel dosyalarını buraya bırakın</b><p>veya bilgisayarınızdan seçmek için tıklayın</p><span class="drop-hint">OBS'den alınmış .xlsx dosyaları · Çoklu seçim desteklenir</span></div>
+          <div id="file-list" class="file-list" aria-live="polite"></div>
+        </section>
+
+        <section class="card" aria-labelledby="settings-title">
+          <div class="card-head"><div><span class="section-index">02 <span> / AYARLAR</span></span><h2 id="settings-title">Yoklama ayarları</h2><p>Seçilen şablon tüm yüklenen dosyalara uygulanır.</p></div></div>
+          <div class="field-label">Haftalık imza sayısı <span class="required">*</span></div>
+          <div class="signature-options" role="radiogroup" aria-label="Haftalık imza sayısı"><label class="signature-option"><input type="radio" name="signatures" value="1"><span class="sig-number">01</span><span><b>1 imza</b><small>Haftada 1 ders saati</small></span><span class="check-circle"></span></label><label class="signature-option"><input type="radio" name="signatures" value="2"><span class="sig-number">02</span><span><b>2 imza</b><small>Haftada 2 ders saati</small></span><span class="check-circle"></span></label><label class="signature-option"><input type="radio" name="signatures" value="3" checked><span class="sig-number">03</span><span><b>3 imza</b><small>Haftada 3 ders saati</small></span><span class="check-circle"></span></label></div>
+          <div class="fields"><label><span class="field-label">Ders kodu ve adı <span class="required">*</span></span><input id="course" type="text" autocomplete="off" placeholder="Örn. BLG103 - Programlama I" required /></label><label><span class="field-label">Öğretim elemanı <span class="required">*</span></span><input id="instructor" type="text" autocomplete="off" placeholder="Örn. Dr. Öğr. Üyesi Ad Soyad" required /></label></div>
+          <div class="notice"><span class="notice-icon">i</span><span><b>Şablon düzeni korunur.</b> Öğrenci sayısına göre otomatik A4 sayfalama yapılır ve son sayfaya boş kayıt satırları eklenir.</span></div>
+        </section>
+
+        <div class="actions"><div class="action-hint"><span class="privacy-dot"></span> Öğrenci verileri cihazınızdan ayrılmaz.</div><button id="generate" class="primary-btn" type="button" disabled><span>Yoklamaları oluştur</span><span class="arrow">→</span></button></div>
+        <section id="status" class="status" aria-live="polite" hidden><span id="status-spinner" class="spinner"></span><div><b id="status-title">Hazırlanıyor</b><p id="status-detail"></p></div></section>
+        <section id="results" class="results" aria-live="polite" hidden><div class="results-head"><div><span class="section-index">03 <span> / ÇIKTILAR</span></span><h2>Dosyalar hazır</h2><p id="results-summary"></p></div><button type="button" id="download-all" class="primary-btn small">Tümünü ZIP indir <span>↓</span></button></div><div id="result-list"></div><div id="error-list"></div></section>
+        <footer class="footer">OBS Yoklama Oluşturucu <span>·</span> Yerel işleme <span>·</span> Excel ve PDF</footer>
+      </div>
+    </main>
+  </div>
+  <div id="print-stage" aria-hidden="true"></div>
+  <script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
+  <script defer src="./assets/app.js"></script>
+</body>
+</html>

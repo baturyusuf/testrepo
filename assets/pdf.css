@@ -1,0 +1,22 @@
+/* Self-contained landscape A4 renderer. 1122x794 corresponds to A4 at 96dpi. */
+#print-stage{position:fixed;left:-12000px;top:0;width:1122px;z-index:-10;pointer-events:none}
+.print-page{width:1122px;height:794px;background:#fff;color:#111;padding:32px 22px 25px;font-family:Arial,"Segoe UI",sans-serif;overflow:hidden;position:relative}
+.print-page *{box-sizing:border-box}
+.print-page .print-head{border:1.6px solid #111;height:57px;display:flex;justify-content:center;align-items:center;text-align:center;font-weight:800;font-size:15px;letter-spacing:.1px}
+.print-page .print-meta{display:grid;grid-template-columns:1fr 1fr;border:1.6px solid #111;border-top:0}
+.print-page .meta-cell{border-right:1px solid #111;min-width:0}.print-page .meta-cell:last-child{border-right:0}
+.print-page .meta-cell strong{display:block;text-align:center;border-bottom:1px solid #111;padding:6px 8px;font-size:11px}
+.print-page .meta-cell span{display:block;text-align:center;padding:8px 9px;font-size:14px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:34px}
+.print-page .print-department{border:1.6px solid #111;border-top:0;background:#e2e6ea;text-align:center;padding:8px 5px;min-height:33px;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.print-page table{border-collapse:collapse;table-layout:fixed;width:100%;border:1.5px solid #111;font-family:Arial,"Segoe UI",sans-serif}
+.print-page th,.print-page td{border:1px solid #222;padding:0 2px;text-align:center;overflow:hidden}
+.print-page th{background:#e7e7e7;font-size:10px;font-weight:800;letter-spacing:0;line-height:1.12}
+.print-page .week-top th{height:25px}.print-page .week-sub th{height:23px;font-size:9px}
+.print-page .week-header{border-bottom:1.4px solid #111}
+.print-page .exam-header,.print-page .exam-cell{background:#cbd0d6;color:#242424;font-size:9px;font-weight:750}
+.print-page .exam-header{word-break:break-word}.print-page .exam-cell{border-left:1.5px solid #111;border-right:1.5px solid #111}
+.print-page td.num{font-weight:650;font-size:11px}.print-page td.rank{font-size:11px;font-weight:650}.print-page td.name{text-align:left;padding-left:5px;font-size:11px;font-weight:750;overflow-wrap:anywhere;line-height:1.16}
+.print-page .student-row:nth-child(even) td:not(.exam-cell){background:#ededed}
+.print-page .student-row:nth-child(odd) td:not(.exam-cell){background:#fff}
+.print-page .page-mark{position:absolute;bottom:10px;right:27px;font-size:9px;color:#555}
+@media print{body{background:white!important}.app{display:none!important}#print-stage{position:static;width:auto;z-index:auto}.print-page{page-break-after:always;break-after:page;margin:0;box-shadow:none}@page{size:A4 landscape;margin:0}}

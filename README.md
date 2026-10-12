@@ -1,0 +1,65 @@
+# OBS Yoklama Oluşturucu — Web
+
+OBS şube öğrenci listelerinden **Excel ve A4 yatay PDF** yoklama listeleri üreten, sunucusuz GitHub Pages uygulaması.
+
+## Kullanım
+
+1. Web sitesini açın; OBS üzerinden indirdiğiniz `.xlsx` öğrenci listelerini sürükleyip bırakın.
+2. Haftalık imza sayısını **1, 2 veya 3** seçin.
+3. Ders kodu ve adı ile öğretim elemanını girin.
+4. **Yoklamaları oluştur** düğmesini seçin.
+5. Çıktıları ayrı ayrı Excel/PDF veya tek ZIP olarak indirin.
+
+Dosyalar tarayıcının içindeki sanal dosya sisteminde işlenir. Öğrenci kayıtları GitHub'a veya uygulamanın bir sunucusuna yüklenmez.
+
+## Mimari
+
+- `index.html` / `assets/app.css`: duyarlı web arayüzü
+- `assets/app.js`: dosya seçimi, Pyodide yükleyici, istemci tarafında PDF/ZIP üretimi
+- `assets/pdf.css`: A4 yatay yoklama tablosu stilleri
+- `yoklama_olustur.py`: orijinal OBS Excel okuma, şablon doldurma ve sayfalama algoritması
+- `web_bridge.py`: Pyodide dosya sistemi adaptörü ve PDF sayfaları için şablon meta verisi
+- `templates/`: orijinal 1, 2 ve 3 imzalı Excel şablonları
+
+İlk açılışta Pyodide (0.27.7), openpyxl (3.1.5), jsPDF, html2canvas ve JSZip CDNs üzerinden indirilir. Başlangıç için internet bağlantısı gerekir; uygulama backend gerektirmez.
+
+## Orijinal Python programına göre uyarlamalar
+
+Excel çıktısı mevcut Python ve `openpyxl` algoritmasını kullanır; öğrenci sayıları, boş satırlar, Türkçe büyük harf, program alanı, ad sığdırma, sayfa sonları ve birleştirilmiş sınav hücreleri korunur. PDF ise Windows Excel COM yerine ayrı bir **HTML → canvas → PDF** motoruyla üretilir. PDF, A4 yatay ve şablonların sayfa başına öğrenci kapasitesini kullanır; Excel'in çıktı motorunun piksel-piksel aynısı olduğu iddia edilmez. PDF içinde metin görsel olarak bulunur, doğrudan seçilebilir değildir.
+
+### Şablon sayfalama kapasitesi
+
+| İmza | Sayfada öğrenci satırı | Çalışma sayfası |
+| --- | ---: | --- |
+| 1 | 17 | main |
+| 2 | 16 | Vize Öncesi, Vize Sonrası |
+| 3 | 23 | Vize Öncesi, Vize Sonrası |
+
+### OBS girdi sütunları
+
+Başlık satırında `Öğrenci No`, `Adı`, `Soyadı`, `Program` aranır. OBS'nin `_XXXX` gibi rastgele başlık son ekleri desteklenir. Hatalı dosyalar bağımsız raporlanır, sağlam dosyalar işlenmeye devam eder.
+
+## GitHub Pages yayımlama
+
+`main` dalı ve `.github/workflows/pages.yml` içeren bir repoda **Settings → Pages → Source: GitHub Actions** seçin. `main` dalına push edildiğinde Pages workflow'u statik uygulamayı yayımlar. Eğer GitHub hesabının yetkilendirdiği connector Pages yönetimini desteklemiyorsa bu seçenek bir defa GitHub arayüzünden açılmalıdır.
+
+Yerel önizleme:
+
+```sh
+python -m http.server 8000
+# http://localhost:8000
+```
+
+> Tarayıcıda `file://` ile doğrudan açmayın; `fetch` için HTTP gerekir.
+
+## Güvenlik ve sınırlamalar
+
+- Gerçek öğrenci listelerini hiçbir zaman repoya eklemeyin. Sadece örnek, anonimleştirilmiş test verisi kullanın.
+- Dosya boyutu ve işleme süresi kullanıcı cihazının RAM/CPU kapasitesine bağlıdır.
+- PDF HTML tablosunun görüntüsünden üretildiğinden metin tabanlı/erişilebilir PDF değildir.
+- Kütüphanelerin ilk kurulumu için internet bağlantısı gerekir.
+- Bütün öğrenci bilgileri yalnızca kullanıcının tarayıcısında işlenir; hata ayıklama için tarayıcı konsoluna tam öğrenci verileri basılmaz.
+
+## Lisans
+
+Bu proje kuruma özel yoklama oluşturma aracının web uyarlamasıdır. Dağıtım ve şablon kullanımı için kurum politikalarını uygulayın.
