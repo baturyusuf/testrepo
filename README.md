@@ -94,3 +94,11 @@ Excel ve PDF için yazı punto bilgisi aynı ayardan beslenir. Chrome üzerinde 
 - Bölüm değiştirici ile tüm yatay çalışma sayfaları gezilebilir. **%100 göster** ile örnek 96 DPI CSS ölçüsünde detaylı inceleme, **Ekrana sığdır** ile ekrana uygun ölçekleme yapılır.
 - Önizleme ile gerçek PDF aynı `YoklamaPrintPage` renderer fonksiyonunu kullanır. Sütun genişlikleri, A4 yan kenar boşlukları ve font boyları Excel üretimindeki mm/pt ölçülerinden hesaplanır.
 - Gerçek Excel çıktısının adı-soyadı sütunu listedeki en uzun gerçek isme göre daralabileceğinden, dosyasız örnek önizlemesi seçili **azami** Ad Soyad genişliğini varsayar. Yazıcı sürücüsü ve Excel font ölçümü küçük sapmalar yaratabilir. Bu sebeple fiziksel baskının birebir piksel eşitliği garanti edilmez.
+## Tam ekran A4 önizleme ve dengeli bölümler (v9)
+
+- Önizlemenin **Tam ekran** düğmesi önce tarayıcının Fullscreen API'sini kullanır; engellenirse ekranı kaplayan yerleşime geçer. **Küçült** düğmesi veya Escape ile çıkılır.
+- Masaüstünde ayarlar / önizleme genişlikleri yaklaşık **%42 / %58** oranındadır. Dar ekranlarda kartlar tek sütuna dönüşür.
+- `page_plan` (Python) ve `paperLayout` (JavaScript) artık açgözlü sıralama yerine **önce en az sayfayı, ardından sütun dağılımındaki kareler toplamını küçülten dinamik programlamayı** kullanır. Haftalar bölünmez, kullanıcı tarafından belirlenen asgari imza alanı korunur.
+- Örnek: 16 hafta, bir imza, 8. hafta vize ve 16. hafta final, asgari 15 mm ile önceden oluşan 13+3 sütun yerine **8+8 sütun** oluşturulur.
+- Başlık bölgeleri, dar yatay bölümlerde birbirine girmesin diye Excel'de fiziksel sütun genişliğine göre tek sütunlu açıklama satırlarına dönüşür; PDF ve önizleme de bu durumu destekler.
+- Yerleşim regresyonları `.github/workflows/validate-layout.yml` ile otomatik çalıştırılır.
