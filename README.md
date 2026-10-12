@@ -41,7 +41,14 @@ Başlık satırında `Öğrenci No`, `Adı`, `Soyadı`, `Program` aranır. OBS'n
 
 ## GitHub Pages yayımlama
 
-`main` dalı ve `.github/workflows/pages.yml` içeren bir repoda **Settings → Pages → Source: GitHub Actions** seçin. `main` dalına push edildiğinde Pages workflow'u statik uygulamayı yayımlar. Eğer GitHub hesabının yetkilendirdiği connector Pages yönetimini desteklemiyorsa bu seçenek bir defa GitHub arayüzünden açılmalıdır.
+Bu proje `baturyusuf/testrepo` deposunun `gh-pages` dalına aktarılmıştır. Yayımlamak için bir kere şu ayarı yapın:
+
+1. [Repo → Settings → Pages](https://github.com/baturyusuf/testrepo/settings/pages) sayfasını açın.
+2. **Build and deployment → Source**: `Deploy from a branch`.
+3. **Branch**: `gh-pages`, klasör: `/(root)` ve **Save**.
+4. Yayımlama tamamlandığında adres: `https://baturyusuf.github.io/testrepo/`.
+
+`.github/workflows/pages.yml`, uygulama daha sonra kendi bağımsız deposuna taşınır ve varsayılan `main` dalında GitHub Actions ile yayımlanırsa kullanılabilecek isteğe bağlı iş akışıdır. Mevcut `gh-pages` dağıtımı için Actions seçmeyin.
 
 Yerel önizleme:
 
