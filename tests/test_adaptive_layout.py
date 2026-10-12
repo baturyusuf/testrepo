@@ -28,6 +28,15 @@ def test_all_combinations():
                         assert min_mark-0.001 <= width <= max(18,min_mark)+0.001
                         assert sum(g.span for g in page)*width+sum(fixed) <= layout.PRINTABLE_MM+0.01
                     checks+=1
+    balanced=layout.page_plan(16,1,8,16,15)
+    assert [sum(g.span for g in part) for part in balanced] == [8,8]
+    # These configurations produced an unattractive 13+3 column split before v9.
+    for total, marks, midterm, final, minimum in [
+        (16,1,8,16,15), (20,5,8,16,15), (10,3,4,9,20),
+    ]:
+        pages=layout.page_plan(total,marks,midterm,final,minimum)
+        assert [g.week for group in pages for g in group]==list(range(1,total+1))
+        assert all(sum(g.span for g in group)*minimum<=layout.PRINTABLE_MM-sum(layout.FIXED_MM)+0.01 for group in pages)
     assert len(layout.page_plan(20,5,8,16,15))>=5
     assert len(layout.page_plan(20,5,8,16,8)) < len(layout.page_plan(20,5,8,16,15))
     return checks

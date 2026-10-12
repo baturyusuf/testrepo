@@ -39,18 +39,33 @@
       throw new RangeError('Sayfa, imza genişliği veya vize/final seçimi geçersiz.');
     // Conservative layout preview assumes the Name column reaches its maximum.
     // Actual sheet calculation uses the longest student name, and may fit more weeks.
-    const pages = [], capacity = 289 - 7.5 - 21 - nameMaxWidthMm;
-    let group = [], used = 0;
-    for (let week = 1; week <= weeks; week++) {
-      const span = week === midterm || week === final ? 1 : signatures;
-      if (span * minWidthMm > capacity)
-        throw new RangeError('Bir haftalık imzalar bu A4 genişliğine sığmıyor.');
-      if (group.length && (used + span) * minWidthMm > capacity + 1e-9) {
-        pages.push(group); group = []; used = 0;
+    const capacity = 289 - 7.5 - 21 - nameMaxWidthMm;
+    const groups = Array.from({length:weeks}, (_,i) => ({
+      week:i+1, span:(i+1===midterm || i+1===final) ? 1 : signatures
+    }));
+    // Identical lexicographic optimization to adaptive_layout.py:
+    // fewest sections, then lowest sum of squared signature-column counts.
+    const dp = Array(weeks+1).fill(null);
+    dp[weeks] = {count:0,squareSum:0,sections:[]};
+    for (let start=weeks-1;start>=0;start--) {
+      let used=0, best=null;
+      for (let end=start+1;end<=weeks;end++) {
+        used+=groups[end-1].span;
+        if (used*minWidthMm > capacity+1e-9) break;
+        const remainder=dp[end];
+        if (!remainder) continue;
+        const candidate={
+          count:remainder.count+1,
+          squareSum:remainder.squareSum+used*used,
+          sections:[groups.slice(start,end),...remainder.sections]
+        };
+        if (!best || candidate.count<best.count ||
+            (candidate.count===best.count && candidate.squareSum<best.squareSum)) best=candidate;
       }
-      group.push({week,span}); used += span;
+      dp[start]=best;
     }
-    if (group.length) pages.push(group);
+    if(!dp[0])throw new RangeError('Geçerli bir A4 sayfa planı oluşturulamadı.');
+    const pages=dp[0].sections;
     return pages.map(g=>{
       const columns = g.reduce((n,entry)=>n+entry.span,0);
       const markWidthMm = Math.round(Math.min(Math.max(18,minWidthMm),capacity/columns)*10000)/10000;

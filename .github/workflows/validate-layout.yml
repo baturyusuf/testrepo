@@ -1,0 +1,30 @@
+name: Validate yoklama layout
+on:
+  push:
+    branches: [gh-pages, preview-layout-v9]
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Excel engine
+        run: python -m pip install openpyxl==3.1.5
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/helpers.js
+          node --check assets/preview.js
+          node --check assets/app.js
+      - name: JavaScript layout regressions
+        run: |
+          node tests/test_helpers.cjs
+          node tests/test_layout_helpers.cjs
+          node tests/test_preview_layout.cjs
+          node tests/test_balanced_sections.cjs
+      - name: Python Excel regressions
+        run: |
+          python -m py_compile adaptive_layout.py web_bridge.py yoklama_olustur.py
+          python tests/test_adaptive_layout.py

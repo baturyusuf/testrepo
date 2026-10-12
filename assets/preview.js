@@ -9,6 +9,32 @@
   const prev = $('#preview-prev');
   const next = $('#preview-next');
   const zoomButton = $('#preview-zoom');
+  const expandButton = $('#preview-expand');
+  const previewCard = document.querySelector('.a4-preview-card');
+  let fallbackExpanded = false;
+  function expanded() { return document.fullscreenElement === previewCard || fallbackExpanded; }
+  function syncExpanded() {
+    const active = expanded();
+    previewCard.classList.toggle('is-expanded', active);
+    document.body.classList.toggle('preview-expanded', active && fallbackExpanded);
+    expandButton.textContent = active ? '⤢ Küçült' : '⛶ Tam ekran';
+    expandButton.setAttribute('aria-expanded', String(active));
+    expandButton.setAttribute('aria-label', active ? 'Tam ekran önizlemeden çık' : 'Önizlemeyi tam ekran aç');
+    requestAnimationFrame(fitPage);
+  }
+  async function toggleExpanded() {
+    if (document.fullscreenElement === previewCard) {
+      await document.exitFullscreen();
+      return;
+    }
+    if (fallbackExpanded) { fallbackExpanded = false; syncExpanded(); return; }
+    if (previewCard.requestFullscreen) {
+      try { await previewCard.requestFullscreen(); syncExpanded(); return; }
+      catch (error) { /* Browser fullscreen blocked: fall back to viewport overlay. */ }
+    }
+    fallbackExpanded = true;
+    syncExpanded();
+  }
   const measures = $('#preview-measurements');
   const zoomLabel = $('#preview-scale');
   const A4_WIDTH_PX = 297 * 96 / 25.4;
@@ -59,8 +85,11 @@
 
   function fitPage() {
     if (!sheetView) return;
-    const available = Math.max(1,viewport.clientWidth - 24);
-    const scale = actualSize ? 1 : Math.min(.78, available / A4_WIDTH_PX);
+    const isExpanded = expanded();
+    const available = Math.max(1, viewport.clientWidth - 24);
+    const availableHeight = isExpanded ? Math.max(1, viewport.clientHeight - 24) : Infinity;
+    const scale = actualSize ? 1 : Math.min(isExpanded ? 1 : .78,
+      available / A4_WIDTH_PX, availableHeight / A4_HEIGHT_PX);
     viewport.classList.toggle('is-actual-size',actualSize);
     canvas.style.width = `${A4_WIDTH_PX * scale}px`;
     canvas.style.height = `${A4_HEIGHT_PX * scale}px`;
@@ -110,6 +139,14 @@
   prev.addEventListener('click', () => {selectedSection=Math.max(0,selectedSection-1);render();});
   next.addEventListener('click', () => {selectedSection++;render();});
   zoomButton.addEventListener('click', () => {actualSize=!actualSize;fitPage();});
+  expandButton.addEventListener('click', toggleExpanded);
+  document.addEventListener('fullscreenchange', syncExpanded);
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && fallbackExpanded) {
+      fallbackExpanded = false;
+      syncExpanded();
+    }
+  });
   for (const id of ['week-count','signature-select','midterm-week','final-week',
       'mark-width','font-size','font-family','name-max-width','academic-year','semester']) {
     $( `#${id}` ).addEventListener('change', () => {selectedSection=0;render();});

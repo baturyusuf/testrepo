@@ -258,18 +258,52 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
         c.font = Font(name=font_family, size=font_pt(13 if len(title)<100 else 11.5, 8), bold=True, color=WHITE)
         c.fill = PatternFill('solid', fgColor=BURGUNDY)
         c.alignment = Alignment(horizontal='center', vertical='center', shrink_to_fit=True)
-        # Department occupies the top of the print area; metadata is preserved on every page.
-        midpoint = max(2, int(last_col * 0.54))
-        for r in (2,3):
-            ws.merge_cells(start_row=r,start_column=1,end_row=r,end_column=midpoint)
-            ws.merge_cells(start_row=r,start_column=midpoint+1,end_row=r,end_column=last_col)
-        for cell, value in (('A2','DERS KODU VE ADI'), (f'{get_column_letter(midpoint+1)}2','ÖĞRETİM ELEMANI'),
-                            ('A3',course), (f'{get_column_letter(midpoint+1)}3',instructor)):
-            c=ws[cell];c.value=_safe_text(value)
-            c.font=Font(name=font_family,size=font_pt(8 if c.row==2 else 10),bold=True,color=TEXT)
-            c.alignment=Alignment(horizontal='center',vertical='center',shrink_to_fit=True)
-            c.fill=PatternFill('solid',fgColor=PALE if c.row==2 else WHITE)
-            c.border=Border(bottom=hairline,left=hairline,right=hairline)
+        # Physical-width-based metadata layout. Two equal-ish blocks are used only
+        # when each has room for its label; otherwise use two full-width rows.
+        physical_columns = list(fixed_widths) + [width] * total_marks
+        table_mm = sum(physical_columns)
+        cutoffs = []
+        for candidate_cut in range(1, last_col):
+            left_mm = sum(physical_columns[:candidate_cut])
+            right_mm = table_mm - left_mm
+            if left_mm >= 55 and right_mm >= 55:
+                cutoffs.append((abs(left_mm - right_mm), candidate_cut))
+        compact_meta = table_mm < 160 or not cutoffs
+        if compact_meta:
+            ws.row_dimensions[2].height = 26
+            ws.row_dimensions[3].height = 30
+            for row, value in (
+                (2, 'DERS KODU VE ADI: ' + str(course)),
+                (3, 'ÖĞRETİM ELEMANI: ' + str(instructor)),
+            ):
+                ws.merge_cells(start_row=row,start_column=1,end_row=row,end_column=last_col)
+                c = ws.cell(row,1)
+                c.value = _safe_text(value)
+                c.font = Font(name=font_family,size=font_pt(8 if row==2 else 9),
+                              bold=True,color=TEXT)
+                c.alignment = Alignment(horizontal='center',vertical='center',
+                                        wrap_text=True,shrink_to_fit=True)
+                c.fill = PatternFill('solid',fgColor=PALE if row==2 else WHITE)
+                c.border = Border(bottom=hairline,left=hairline,right=hairline)
+        else:
+            midpoint = min(cutoffs)[1]
+            for row in (2,3):
+                ws.merge_cells(start_row=row,start_column=1,end_row=row,end_column=midpoint)
+                ws.merge_cells(start_row=row,start_column=midpoint+1,end_row=row,end_column=last_col)
+            cells = (
+                ('A2','DERS KODU VE ADI'),
+                (f'{get_column_letter(midpoint+1)}2','ÖĞRETİM ELEMANI'),
+                ('A3',course),
+                (f'{get_column_letter(midpoint+1)}3',instructor),
+            )
+            for cell, value in cells:
+                c=ws[cell];c.value=_safe_text(value)
+                c.font=Font(name=font_family,size=font_pt(8 if c.row==2 else 10),
+                            bold=True,color=TEXT)
+                c.alignment=Alignment(horizontal='center',vertical='center',
+                                      shrink_to_fit=True,wrap_text=True)
+                c.fill=PatternFill('solid',fgColor=PALE if c.row==2 else WHITE)
+                c.border=Border(bottom=hairline,left=hairline,right=hairline)
         ws.merge_cells(start_row=4,start_column=1,end_row=4,end_column=last_col)
         c=ws['A4'];c.value=_safe_text(department or 'BÖLÜM BİLGİSİ BELİRTİLMEDİ')
         c.font=Font(name=font_family,size=font_pt(11),bold=True,color=BURGUNDY)
@@ -337,6 +371,7 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
             'fixedWidthsMm':list(fixed_widths),'rowHeightPt':STUDENT_HEIGHT_PT,
             'minMarkWidthMm':min_mark_mm,'nameMaxWidthMm':name_max_mm,
             'fontSizePt':font_size_pt,'fontFamily':font_family,
+            'compactMeta':compact_meta,
             'printableWidthMm':PRINTABLE_MM,'totalWidthMm':round(sum(fixed_widths)+total_marks*width,3),
             'weekStart':groups[0].week,'weekEnd':groups[-1].week,
         })

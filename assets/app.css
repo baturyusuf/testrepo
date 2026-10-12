@@ -159,3 +159,44 @@
   .workspace-grid>.settings-stack{grid-template-columns:minmax(0,1fr)}
   .workspace-grid>.a4-preview-card .a4-preview-viewport.is-actual-size{max-height:480px}
 }
+
+/* v9 — Wider preview plus keyboard-accessible fullscreen / native Fullscreen API. */
+.workspace-grid{grid-template-columns:minmax(0,.84fr) minmax(0,1.16fr)}
+.workspace-grid>.a4-preview-card .a4-preview-controls .a4-preview-expand{
+  background:#fff7f8;color:#95132a;border:1px solid #dfabb5;white-space:nowrap
+}
+.workspace-grid>.a4-preview-card .a4-preview-controls .a4-preview-expand:hover{
+  background:#fee9ed;border-color:#bb6273
+}
+body.preview-expanded{overflow:hidden}
+body.preview-expanded::before{
+  content:"";position:fixed;inset:0;z-index:9997;background:rgba(25,16,23,.78)
+}
+.workspace-grid>.a4-preview-card.is-expanded,
+.workspace-grid>.a4-preview-card:fullscreen{
+  position:fixed!important;inset:0!important;top:0!important;left:0!important;
+  z-index:9999;width:100vw;height:100dvh;max-width:none;max-height:none!important;
+  margin:0;border-radius:0;background:#fff;padding:18px 22px;
+  display:flex;flex-direction:column;overflow:hidden
+}
+.workspace-grid>.a4-preview-card.is-expanded .a4-preview-viewport,
+.workspace-grid>.a4-preview-card:fullscreen .a4-preview-viewport{
+  flex:1 1 auto;min-height:0;max-height:none!important;overflow:auto
+}
+.workspace-grid>.a4-preview-card.is-expanded .a4-preview-toolbar,
+.workspace-grid>.a4-preview-card:fullscreen .a4-preview-toolbar{
+  flex-direction:row;align-items:center;flex-wrap:wrap
+}
+.workspace-grid>.a4-preview-card.is-expanded .a4-preview-disclaimer,
+.workspace-grid>.a4-preview-card:fullscreen .a4-preview-disclaimer{flex-shrink:0}
+@media(max-width:1020px){
+  .workspace-grid{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:760px){
+  .workspace-grid>.a4-preview-card.is-expanded,
+  .workspace-grid>.a4-preview-card:fullscreen{padding:10px 12px}
+  .workspace-grid>.a4-preview-card.is-expanded .a4-preview-toolbar,
+  .workspace-grid>.a4-preview-card:fullscreen .a4-preview-toolbar{
+    flex-direction:column;align-items:stretch
+  }
+}

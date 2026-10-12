@@ -220,6 +220,12 @@
     const markWidth = sheet.markWidthMm || 15;
     const sheetWidthMm = fixed.reduce((n,v)=>n+v,0) + numericCols * markWidth;
     const colWidths = [...fixed, ...Array(numericCols).fill(markWidth)];
+    const compactMeta = typeof sheet.compactMeta === 'boolean'
+      ? sheet.compactMeta
+      : (sheetWidthMm < 160 || !colWidths.slice(0,-1).some((_,i) => {
+          const left = colWidths.slice(0,i+1).reduce((n,x)=>n+x,0);
+          return left >= 55 && sheetWidthMm-left >= 55;
+        }));
     const fontPt = Number(sheet.fontSizePt || 8);
     const family = ['Aptos','Arial','Calibri','Times New Roman'].includes(sheet.fontFamily) ? sheet.fontFamily : 'Aptos';
     el.style.setProperty('--print-font', `"${family}", Arial, sans-serif`);
@@ -227,7 +233,7 @@
     el.style.setProperty('--num-font-px', `${(Math.max(6,fontPt-1)*96/72).toFixed(2)}px`);
     el.style.setProperty('--header-font-px', `${(Math.max(6,fontPt-1)*96/72).toFixed(2)}px`);
     el.style.setProperty('--mark-header-font-px', `${(Math.max(6,fontPt-2)*96/72).toFixed(2)}px`);
-    el.style.setProperty('--heading-font-px', `${(Math.max(8,fontPt+3)*96/72).toFixed(2)}px`);
+    el.style.setProperty('--heading-font-px', `${(Math.max(7,Math.min(fontPt+3,sheetWidthMm<175?9:fontPt+3))*96/72).toFixed(2)}px`);
     el.style.setProperty('--meta-font-px', `${(fontPt*96/72).toFixed(2)}px`);
     const pxPerMm = 96 / 25.4;
     const tableWidthPx = sheetWidthMm * pxPerMm;
@@ -240,7 +246,7 @@
       ? Array.from({length: group.span}, (_, i) => `<th>${i + 1}. İMZA</th>`).join('') : '').join('');
     const body = rows.map(row => `<tr class="student-row" style="height:${((sheet.rowHeightPt || 23.5) * 96/72).toFixed(2)}px"><td class="rank">${html(row.rank)}</td><td class="num">${html(row.number)}</td><td class="name" style="font-size:${((Number(row.nameFontPt || sheet.fontSizePt || 8))*96/72).toFixed(2)}px">${html(row.name)}</td>${groups.map(group => Array.from({length:group.span}, () => `<td class="${group.kind === 'exam' ? 'exam-cell' : ''}"></td>`).join('')).join('')}</tr>`).join('');
 
-    el.innerHTML = `<div class="print-head">${html(sheet.title)}</div><div class="print-meta"><div class="meta-cell"><strong>Ders Kodu ve İsmi</strong><span>${html(sheet.course)}</span></div><div class="meta-cell"><strong>Dersin Öğretim Elemanı ve İmzası</strong><span>${html(sheet.instructor)}</span></div></div><div class="print-department">${html(sheet.department)}</div><table style="width:${tableWidthPx.toFixed(3)}px"><colgroup>${colDefs}</colgroup><thead><tr class="week-top"><th rowspan="2">SIRA</th><th rowspan="2">NUMARA</th><th rowspan="2">AD SOYAD</th>${firstLine}</tr><tr class="week-sub">${secondLine}</tr></thead><tbody>${body}</tbody></table><span class="page-mark">${html(sheet.name)} · ${pageNum} / ${pageTotal}</span>`;
+    el.innerHTML = `<div class="print-head">${html(sheet.title)}</div><div class="print-meta${compactMeta ? ' compact' : ''}"><div class="meta-cell"><strong>Ders Kodu ve İsmi</strong><span>${html(sheet.course)}</span></div><div class="meta-cell"><strong>Dersin Öğretim Elemanı ve İmzası</strong><span>${html(sheet.instructor)}</span></div></div><div class="print-department">${html(sheet.department)}</div><table style="width:${tableWidthPx.toFixed(3)}px"><colgroup>${colDefs}</colgroup><thead><tr class="week-top"><th rowspan="2">SIRA</th><th rowspan="2">NUMARA</th><th rowspan="2">AD SOYAD</th>${firstLine}</tr><tr class="week-sub">${secondLine}</tr></thead><tbody>${body}</tbody></table><span class="page-mark">${html(sheet.name)} · ${pageNum} / ${pageTotal}</span>`;
     return el;
   }
   // The lightweight preview calls this same renderer; it never loads OBS files or Pyodide.
