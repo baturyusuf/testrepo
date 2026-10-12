@@ -12,6 +12,10 @@
   const yearUI = $('#academic-year');
   const semesterUI = $('#semester');
   const weekUI = $('#week-count');
+  const markWidthUI = $('#mark-width');
+  const fontSizeUI = $('#font-size');
+  const fontFamilyUI = $('#font-family');
+  const nameMaxUI = $('#name-max-width');
   const midtermUI = $('#midterm-week');
   const finalUI = $('#final-week');
   const helpers = window.YoklamaHelpers;
@@ -43,6 +47,15 @@
   const html = (value) => String(value ?? '').replace(/[&<>"']/g, ch => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch]));
   const safeName = (value) => String(value).replace(/\\/g, '/').split('/').pop().replace(/[^\p{L}\p{N}_\.\- ]/gu, '_').replace(/^[. ]+|[. ]+$/g, '').slice(0,110) || 'obs.xlsx';
   const tick = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  for (let width = 8; width <= 20; width++) markWidthUI.add(new Option(`${width} mm`, String(width)));
+  for (let pt = 6; pt <= 14; pt++) fontSizeUI.add(new Option(`${pt} pt`, String(pt)));
+  for (let mm = 30; mm <= 80; mm += 2) nameMaxUI.add(new Option(`${mm} mm`, String(mm)));
+  markWidthUI.value = '15';
+  fontSizeUI.value = '8';
+  nameMaxUI.value = '58';
+  const minMarkWidth = () => Number(markWidthUI.value);
+  const fontSizePt = () => Number(fontSizeUI.value);
+  const nameMaxWidth = () => Number(nameMaxUI.value);
   const signatureCount = () => Number($('#signature-select').value);
   const weekCount = () => Number(weekUI.value);
   const midtermWeek = () => Number(midtermUI.value);
@@ -61,9 +74,9 @@
   function updatePlanPreview() {
     const node = $('#layout-preview');
     try {
-      const plan = helpers.paperLayout(weekCount(),signatureCount(),midtermWeek(),finalWeek());
+      const plan = helpers.paperLayout(weekCount(),signatureCount(),midtermWeek(),finalWeek(),minMarkWidth(),nameMaxWidth());
       const minWidth = Math.min(...plan.map(p=>p.minWidthMm));
-      node.textContent = `A4 yatay: ${plan.length} bölüm · imza alanı en az ${minWidth.toFixed(1)} mm · her sayfada en fazla 17 öğrenci`;
+      node.textContent = `A4 yatay: tahmini ${plan.length} bölüm · imza alanı ≥ ${minMarkWidth()} mm · ad soyad ≤ ${nameMaxWidth()} mm · yazı ${fontSizePt()} pt · en fazla 17 öğrenci/sayfa`;
       node.classList.remove('layout-error');
       node.title = plan.map(p=>`${p.start}–${p.end}. haftalar (${p.columns} sütun)`).join(' | ');
       return true;
@@ -129,7 +142,7 @@
     renderFiles();
   }));
   instructorUI.addEventListener('input', () => { invalidateResults(); renderFiles(); });
-  [yearUI, semesterUI, $('#signature-select'), midtermUI, finalUI].forEach(el => el.addEventListener('change', () => {
+  [yearUI, semesterUI, $('#signature-select'), midtermUI, finalUI, markWidthUI, fontSizeUI, fontFamilyUI, nameMaxUI].forEach(el => el.addEventListener('change', () => {
     invalidateResults(); updatePlanPreview(); renderFiles();
   }));
   weekUI.addEventListener('change', () => { syncExamOptions(); invalidateResults(); renderFiles(); });
@@ -203,17 +216,26 @@
     const groups = sheet.groups;
     const numericCols = groups.reduce((sum, item) => sum + item.span, 0);
     const printableMm = sheet.printableWidthMm || 289;
-    const fixed = sheet.fixedWidthsMm || [10,26,58];
-    const markWidth = sheet.markWidthMm || 9;
+    const fixed = sheet.fixedWidthsMm || [7.5,21,58];
+    const markWidth = sheet.markWidthMm || 15;
     const sheetWidthMm = fixed.reduce((n,v)=>n+v,0) + numericCols * markWidth;
     const colWidths = [...fixed, ...Array(numericCols).fill(markWidth)];
+    const fontPt = Number(sheet.fontSizePt || 8);
+    const family = ['Aptos','Arial','Calibri','Times New Roman'].includes(sheet.fontFamily) ? sheet.fontFamily : 'Aptos';
+    el.style.setProperty('--print-font', `"${family}", Arial, sans-serif`);
+    el.style.setProperty('--name-font-px', `${(fontPt*96/72).toFixed(2)}px`);
+    el.style.setProperty('--num-font-px', `${(Math.max(6,fontPt-1)*96/72).toFixed(2)}px`);
+    el.style.setProperty('--header-font-px', `${(Math.max(6,fontPt-1)*96/72).toFixed(2)}px`);
+    el.style.setProperty('--mark-header-font-px', `${(Math.max(6,fontPt-2)*96/72).toFixed(2)}px`);
+    el.style.setProperty('--heading-font-px', `${(Math.max(8,fontPt+3)*96/72).toFixed(2)}px`);
+    el.style.setProperty('--meta-font-px', `${(fontPt*96/72).toFixed(2)}px`);
     const colDefs = colWidths.map(mm=>`<col style="width:${(mm / sheetWidthMm * 100).toFixed(4)}%">`).join('');
     const firstLine = groups.map(group => group.kind === 'week'
       ? `<th class="week-header" colspan="${group.span}">${html(group.label)}</th>`
       : `<th class="exam-header" colspan="${group.span}" rowspan="2">${html(group.label)}</th>`).join('');
     const secondLine = groups.map(group => group.kind === 'week'
       ? Array.from({length: group.span}, (_, i) => `<th>${i + 1}. İMZA</th>`).join('') : '').join('');
-    const body = rows.map(row => `<tr class="student-row" style="height:${((sheet.rowHeightPt || 23.5) * 96/72).toFixed(2)}px"><td class="rank">${html(row.rank)}</td><td class="num">${html(row.number)}</td><td class="name">${html(row.name)}</td>${groups.map(group => Array.from({length:group.span}, () => `<td class="${group.kind === 'exam' ? 'exam-cell' : ''}"></td>`).join('')).join('')}</tr>`).join('');
+    const body = rows.map(row => `<tr class="student-row" style="height:${((sheet.rowHeightPt || 23.5) * 96/72).toFixed(2)}px"><td class="rank">${html(row.rank)}</td><td class="num">${html(row.number)}</td><td class="name" style="font-size:${((Number(row.nameFontPt || sheet.fontSizePt || 8))*96/72).toFixed(2)}px">${html(row.name)}</td>${groups.map(group => Array.from({length:group.span}, () => `<td class="${group.kind === 'exam' ? 'exam-cell' : ''}"></td>`).join('')).join('')}</tr>`).join('');
 
     el.innerHTML = `<div class="print-head">${html(sheet.title)}</div><div class="print-meta"><div class="meta-cell"><strong>Ders Kodu ve İsmi</strong><span>${html(sheet.course)}</span></div><div class="meta-cell"><strong>Dersin Öğretim Elemanı ve İmzası</strong><span>${html(sheet.instructor)}</span></div></div><div class="print-department">${html(sheet.department)}</div><table style="width:${(sheetWidthMm / printableMm * 100).toFixed(3)}%"><colgroup>${colDefs}</colgroup><thead><tr class="week-top"><th rowspan="2">SIRA</th><th rowspan="2">NUMARA</th><th rowspan="2">AD SOYAD</th>${firstLine}</tr><tr class="week-sub">${secondLine}</tr></thead><tbody>${body}</tbody></table><span class="page-mark">${html(sheet.name)} · ${pageNum} / ${pageTotal}</span>`;
     return el;
@@ -276,6 +298,10 @@
     const midterm = midtermWeek();
     const final = finalWeek();
     const course = courseUI.value.trim();
+    const minMarkWidthMm = minMarkWidth();
+    const fontSize = fontSizePt();
+    const fontFamily = fontFamilyUI.value;
+    const nameMaxWidthMm = nameMaxWidth();
     const academicYear = yearUI.value;
     const semester = semesterUI.value;
     try {
@@ -290,7 +316,7 @@
         py.FS.writeFile(`${path}/${safeName(f.name)}`, new Uint8Array(await f.arrayBuffer()));
         descriptors.push({name:f.name});
       }
-      const payload = JSON.stringify({signatures, weeks, midterm, final, course, instructor:instructorUI.value.trim(), academicYear, semester, files:descriptors});
+      const payload = JSON.stringify({signatures, weeks, midterm, final, minMarkWidthMm, fontSizePt:fontSize, fontFamily, nameMaxWidthMm, course, instructor:instructorUI.value.trim(), academicYear, semester, files:descriptors});
       py.globals.set('browser_payload', payload);
       const response = await py.runPythonAsync('import web_bridge; web_bridge.generate(browser_payload)');
       const manifest = JSON.parse(response);

@@ -25,3 +25,16 @@
 .print-page .week-top th,.print-page .week-sub th{overflow-wrap:anywhere;word-break:normal}
 .print-page .exam-header{font-size:8px;line-height:1.1}
 .print-page .student-row{max-height:33px}
+
+/* Printed PDF font sizes are the same physical point size supplied to Excel. */
+.print-page{font-family:var(--print-font,Arial,sans-serif)}
+.print-page table{font-family:var(--print-font,Arial,sans-serif)}
+.print-page .print-head{font-size:var(--heading-font-px,14.7px)}
+.print-page .print-meta .meta-cell strong{font-size:var(--header-font-px,9.33px)}
+.print-page .print-meta .meta-cell span{font-size:var(--meta-font-px,10.67px)}
+.print-page .print-department{font-size:var(--meta-font-px,10.67px)}
+.print-page th{font-size:var(--header-font-px,9.33px)}
+.print-page .week-sub th{font-size:var(--mark-header-font-px,8px)}
+.print-page .exam-header{font-size:var(--mark-header-font-px,8px)}
+.print-page td.name{font-size:var(--name-font-px,10.67px)}
+.print-page td.num,.print-page td.rank{font-size:var(--num-font-px,9.33px)}

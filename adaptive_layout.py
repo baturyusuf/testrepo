@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import math
 import re
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -24,10 +25,17 @@ import yoklama_olustur as core
 PAGE_WIDTH_MM = 297.0
 SIDE_MARGIN_MM = 4.0
 PRINTABLE_MM = PAGE_WIDTH_MM - 2 * SIDE_MARGIN_MM
-FIXED_MM = (10.0, 26.0, 58.0)          # sıra, öğrenci numarası, ad soyad
-MARK_MIN_MM = 8.80                     # physical minimum for handwriting
-MARK_MAX_MM = 18.0                     # avoid oversized empty signature cells
-MAX_COLUMNS_WIDTH_MM = PRINTABLE_MM - sum(FIXED_MM)  # 195 mm
+# Initial column widths are not fixed as a group: name width is data-dependent.
+SERIAL_WIDTH_MM = 7.5
+STUDENT_NUMBER_WIDTH_MM = 21.0
+NAME_MIN_MM = 28.0
+NAME_MAX_DEFAULT_MM = 58.0              # preserves the previous name-column ceiling
+FIXED_MM = (SERIAL_WIDTH_MM, STUDENT_NUMBER_WIDTH_MM, NAME_MAX_DEFAULT_MM)  # conservative preview
+MARK_MIN_MM = 15.0                     # user-selectable default, physical handwriting minimum
+MARK_MAX_MM = 18.0                     # may increase if user chooses minimum > 18 mm
+MAX_COLUMNS_WIDTH_MM = PRINTABLE_MM - sum(FIXED_MM)
+FONT_DEFAULT_PT = 8                    # previous student-name font: 10 pt
+FONT_FAMILIES = ('Aptos', 'Arial', 'Calibri', 'Times New Roman')
 HEADER_ROWS = 6
 STUDENTS_PER_PAGE = 17
 STUDENT_HEIGHT_PT = 23.5              # 8.29 mm
@@ -78,16 +86,74 @@ def groups_for_weeks(weeks, signatures, midterm, final):
     return groups
 
 
-def page_plan(weeks, signatures, midterm, final):
-    """Greedily pack whole weeks into landscape sheets, enforcing actual minimum mm."""
+def validate_presentation(min_mark_mm=MARK_MIN_MM, font_size_pt=FONT_DEFAULT_PT,
+                          font_family='Aptos', name_max_mm=NAME_MAX_DEFAULT_MM):
+    """Validate display settings once; never trust values coming from the browser."""
+    try:
+        min_mark_mm = float(min_mark_mm)
+        font_size_pt = int(font_size_pt)
+        name_max_mm = float(name_max_mm)
+    except (TypeError, ValueError) as exc:
+        raise ValueError('Yazı puntosu ve genişlikler sayısal olmalıdır') from exc
+    if not (math.isfinite(min_mark_mm) and 8 <= min_mark_mm <= 20):
+        raise ValueError('Asgari imza genişliği 8–20 mm olmalıdır')
+    if not 6 <= font_size_pt <= 14:
+        raise ValueError('Yazı puntosu 6–14 arasında olmalıdır')
+    if not (math.isfinite(name_max_mm) and 30 <= name_max_mm <= 80):
+        raise ValueError('Ad Soyad üst sınırı 30–80 mm olmalıdır')
+    if font_family not in FONT_FAMILIES:
+        raise ValueError('Desteklenmeyen yazı tipi')
+    return min_mark_mm, font_size_pt, font_family, name_max_mm
+
+
+def raw_name_width_mm(name, font_size_pt=FONT_DEFAULT_PT, font_family='Aptos'):
+    """Approximate bold text length without OS-dependent font rendering."""
+    def glyph_em(ch):
+        if ch.isspace(): return .34
+        if ch in 'Iİıl|!.,;:\'': return .31
+        if ch in 'MWŞĞÖÜÇQ@%': return .77
+        if ch.isdigit(): return .56
+        if unicodedata.east_asian_width(ch) in ('W', 'F'): return 1.0
+        if ch.isupper(): return .61
+        return .52
+    family_factor = 0.92 if font_family == 'Aptos' else (1.0 if font_family == 'Times New Roman' else .97)
+    return sum(glyph_em(ch) for ch in str(name or '')) * font_size_pt * (25.4 / 72) * family_factor
+
+
+def estimated_name_width_mm(students, font_size_pt=FONT_DEFAULT_PT, maximum_mm=NAME_MAX_DEFAULT_MM,
+                            font_family='Aptos'):
+    """The longest student's name determines the entire Name-column width."""
+    widest = max(raw_name_width_mm(name, font_size_pt, font_family) for _, name in students)
+    return round(max(NAME_MIN_MM, min(maximum_mm, widest + 4.0)), 2)
+
+
+def fitted_name_font_pt(name, width_mm, requested_pt, font_family='Aptos'):
+    """Only downsize an exceptionally long name so it fits in at most two lines."""
+    max_one_line = max(1, width_mm - 3.5)
+    if raw_name_width_mm(name, requested_pt, font_family) <= max_one_line:
+        return requested_pt
+    # A 23.5 pt row contains up to two lines at approximately 9 pt.
+    for candidate in range(min(requested_pt, 9), 5, -1):
+        if raw_name_width_mm(name, candidate, font_family) <= max_one_line * 1.95:
+            return candidate
+    return 6
+
+
+def page_plan(weeks, signatures, midterm, final, min_mark_mm=MARK_MIN_MM, fixed_widths_mm=FIXED_MM):
+    """Group full weeks into A4 landscape sheets with a physical minimum cell width."""
     weeks, signatures, midterm, final = validate_settings(weeks, signatures, midterm, final)
+    if not math.isfinite(min_mark_mm) or not 8 <= min_mark_mm <= 20:
+        raise ValueError('Asgari imza genişliği 8–20 mm olmalıdır')
+    available = PRINTABLE_MM - sum(fixed_widths_mm)
+    if available <= 0:
+        raise ValueError('Sütunlara ayrılan alan A4 genişliğini aşıyor')
     all_groups = groups_for_weeks(weeks, signatures, midterm, final)
     pages, current, used = [], [], 0
     for group in all_groups:
-        required = group.span * MARK_MIN_MM
-        if required > MAX_COLUMNS_WIDTH_MM:
-            raise ValueError("İmza sayısı mevcut kâğıt genişliğine sığmıyor")
-        if current and (used + group.span) * MARK_MIN_MM > MAX_COLUMNS_WIDTH_MM + 1e-9:
+        required = group.span * min_mark_mm
+        if required > available + 1e-9:
+            raise ValueError('İmza sayısı ve asgari genişlik mevcut A4 sayfasına sığmıyor')
+        if current and (used + group.span) * min_mark_mm > available + 1e-9:
             pages.append(current)
             current, used = [], 0
         current.append(group)
@@ -102,13 +168,14 @@ def mm_to_excel_chars(mm):
     return round((mm * 96 / 25.4 - 5) / 7, 2)
 
 
-def mark_width_mm(groups):
+def mark_width_mm(groups, min_mark_mm=MARK_MIN_MM, fixed_widths_mm=FIXED_MM):
     count = sum(g.span for g in groups)
     if not count:
-        raise ValueError("Çıktı sayfası boş olamaz")
-    value = min(MARK_MAX_MM, MAX_COLUMNS_WIDTH_MM / count)
-    if value + 1e-7 < MARK_MIN_MM:
-        raise ValueError("İmza hücresi için yeterli genişlik yok")
+        raise ValueError('Çıktı sayfası boş olamaz')
+    available = PRINTABLE_MM - sum(fixed_widths_mm)
+    value = min(max(MARK_MAX_MM, min_mark_mm), available / count)
+    if value + 1e-7 < min_mark_mm:
+        raise ValueError('İmza hücresi için yeterli genişlik yok')
     return round(value, 4)
 
 
@@ -147,14 +214,26 @@ def _name_for_sheet(groups, index):
     return f'{index:02d} - {label}'[:31]
 
 
-def build_workbook(students, department, course, instructor, title, weeks, signatures, midterm, final):
-    """Return a workbook and a JSON-safe manifest for the browser's PDF renderer."""
-    segments = page_plan(weeks, signatures, midterm, final)
+def build_workbook(students, department, course, instructor, title, weeks, signatures, midterm, final,
+                   min_mark_mm=MARK_MIN_MM, font_size_pt=FONT_DEFAULT_PT,
+                   font_family='Aptos', name_max_mm=NAME_MAX_DEFAULT_MM):
+    """Return an A4 workbook + the exact dimensions/fonts for the PDF renderer."""
+    min_mark_mm, font_size_pt, font_family, name_max_mm = validate_presentation(
+        min_mark_mm, font_size_pt, font_family, name_max_mm)
     if not students:
         raise ValueError('Listede öğrenci yok')
+    name_width = estimated_name_width_mm(students, font_size_pt, name_max_mm, font_family)
+    fixed_widths = (SERIAL_WIDTH_MM, STUDENT_NUMBER_WIDTH_MM, name_width)
+    segments = page_plan(weeks, signatures, midterm, final, min_mark_mm, fixed_widths)
+    # Old size is now 2 pt smaller by default. All text groups follow the slider.
+    size_offset = font_size_pt - 10
+    def font_pt(previous, lower=6):
+        return max(lower, previous + size_offset)
     wb = Workbook()
     wb.remove(wb.active)
     total_students = len(students)
+    name_font_sizes = [fitted_name_font_pt(name, name_width, font_size_pt, font_family)
+                       for _,name in students]
     physical_pages = math.ceil(total_students / STUDENTS_PER_PAGE)
     blank = physical_pages * STUDENTS_PER_PAGE - total_students
     last_row = HEADER_ROWS + total_students + blank
@@ -164,11 +243,11 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
     total_segments = len(segments)
     for i, groups in enumerate(segments, 1):
         ws = wb.create_sheet(_name_for_sheet(groups, i))
-        width = mark_width_mm(groups)
+        width = mark_width_mm(groups, min_mark_mm, fixed_widths)
         total_marks = sum(g.span for g in groups)
         last_col = 3 + total_marks
         last_letter = get_column_letter(last_col)
-        for col, mm in enumerate(FIXED_MM, 1):
+        for col, mm in enumerate(fixed_widths, 1):
             ws.column_dimensions[get_column_letter(col)].width = mm_to_excel_chars(mm)
         for col in range(4, last_col + 1):
             ws.column_dimensions[get_column_letter(col)].width = mm_to_excel_chars(width)
@@ -176,7 +255,7 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
             ws.row_dimensions[row].height = height
         ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=last_col)
         c = ws['A1']; c.value = title
-        c.font = Font(name='Aptos', size=13 if len(title)<100 else 11.5, bold=True, color=WHITE)
+        c.font = Font(name=font_family, size=font_pt(13 if len(title)<100 else 11.5, 8), bold=True, color=WHITE)
         c.fill = PatternFill('solid', fgColor=BURGUNDY)
         c.alignment = Alignment(horizontal='center', vertical='center', shrink_to_fit=True)
         # Department occupies the top of the print area; metadata is preserved on every page.
@@ -187,19 +266,19 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
         for cell, value in (('A2','DERS KODU VE ADI'), (f'{get_column_letter(midpoint+1)}2','ÖĞRETİM ELEMANI'),
                             ('A3',course), (f'{get_column_letter(midpoint+1)}3',instructor)):
             c=ws[cell];c.value=_safe_text(value)
-            c.font=Font(name='Aptos',size=8 if c.row==2 else 10,bold=True,color=TEXT)
+            c.font=Font(name=font_family,size=font_pt(8 if c.row==2 else 10),bold=True,color=TEXT)
             c.alignment=Alignment(horizontal='center',vertical='center',shrink_to_fit=True)
             c.fill=PatternFill('solid',fgColor=PALE if c.row==2 else WHITE)
             c.border=Border(bottom=hairline,left=hairline,right=hairline)
         ws.merge_cells(start_row=4,start_column=1,end_row=4,end_column=last_col)
         c=ws['A4'];c.value=_safe_text(department or 'BÖLÜM BİLGİSİ BELİRTİLMEDİ')
-        c.font=Font(name='Aptos',size=11,bold=True,color=BURGUNDY)
+        c.font=Font(name=font_family,size=font_pt(11),bold=True,color=BURGUNDY)
         c.fill=PatternFill('solid',fgColor=GRAY)
         c.alignment=Alignment(horizontal='center',vertical='center',shrink_to_fit=True)
         for col, label in ((1,'SIRA'),(2,'ÖĞRENCİ NO'),(3,'AD SOYAD')):
             ws.merge_cells(start_row=5,start_column=col,end_row=6,end_column=col)
             c=ws.cell(5,col,label)
-            c.font=Font(name='Aptos',size=9,bold=True,color=WHITE)
+            c.font=Font(name=font_family,size=font_pt(9),bold=True,color=WHITE)
             c.fill=PatternFill('solid',fgColor=BURGUNDY)
             c.border=Border(left=hairline,right=hairline,bottom=hairline)
             c.alignment=Alignment(horizontal='center',vertical='center',wrap_text=True)
@@ -212,14 +291,14 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
             if g.span > 1:
                 ws.merge_cells(start_row=5,start_column=start,end_row=5,end_column=end)
             c=ws.cell(5,start,g.label)
-            c.font=Font(name='Aptos',size=8 if g.span>1 else 7,bold=True,color=WHITE if g.kind=='week' else TEXT)
+            c.font=Font(name=font_family,size=font_pt(8 if g.span>1 else 7),bold=True,color=WHITE if g.kind=='week' else TEXT)
             c.fill=PatternFill('solid',fgColor=BURGUNDY if g.kind=='week' else EXAM_GRAY)
             c.alignment=Alignment(horizontal='center',vertical='center',wrap_text=True,shrink_to_fit=True)
             c.border=Border(left=hairline,right=hairline,bottom=hairline)
             for mark_i in range(g.span):
                 x=ws.cell(6,start+mark_i)
                 x.value=f'{mark_i+1}. İMZA' if g.kind=='week' else 'SINAV'
-                x.font=Font(name='Aptos',size=7,bold=True,color=TEXT)
+                x.font=Font(name=font_family,size=font_pt(7),bold=True,color=TEXT)
                 x.alignment=Alignment(horizontal='center',vertical='center',shrink_to_fit=True)
                 x.fill=PatternFill('solid',fgColor=PALE if g.kind=='week' else EXAM_GRAY)
                 x.border=Border(left=hairline,right=hairline,bottom=hairline)
@@ -239,7 +318,8 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
                 c.fill=PatternFill('solid',fgColor=(EXAM_GRAY if col in exam_columns else GRAY if idx%2 else WHITE))
                 c.border=Border(left=hairline,right=hairline,bottom=hairline)
                 c.alignment=Alignment(horizontal='left' if col==3 else 'center',vertical='center',wrap_text=col==3,shrink_to_fit=True)
-                c.font=Font(name='Aptos Narrow' if col==3 else 'Aptos',size=10 if col==3 else 9,bold=(col==3),color=TEXT)
+                pt = name_font_sizes[idx] if col == 3 and idx < total_students else (font_size_pt if col == 3 else max(6,font_size_pt-1))
+                c.font=Font(name='Aptos Narrow' if col==3 and font_family=='Aptos' else font_family,size=pt,bold=(col==3),color=TEXT)
         _print_setup(ws,last_col,last_row)
         pages=[]
         for page in range(physical_pages):
@@ -247,14 +327,17 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
             for j in range(STUDENTS_PER_PAGE):
                 idx=page*STUDENTS_PER_PAGE+j
                 num,name=students[idx] if idx<total_students else ('','')
-                page_rows.append({'rank':idx+1, 'number':num, 'name':name})
+                page_rows.append({'rank':idx+1, 'number':num, 'name':name,
+                                  'nameFontPt':name_font_sizes[idx] if idx < total_students else font_size_pt})
             pages.append(page_rows)
         layouts.append({
             'name':ws.title,'title':title,'course':course,'instructor':instructor,
             'department':department,'groups':pdf_groups,'pages':pages,
             'capacity':STUDENTS_PER_PAGE,'markWidthMm':width,
-            'fixedWidthsMm':list(FIXED_MM),'rowHeightPt':STUDENT_HEIGHT_PT,
-            'printableWidthMm':PRINTABLE_MM,'totalWidthMm':round(sum(FIXED_MM)+total_marks*width,3),
+            'fixedWidthsMm':list(fixed_widths),'rowHeightPt':STUDENT_HEIGHT_PT,
+            'minMarkWidthMm':min_mark_mm,'nameMaxWidthMm':name_max_mm,
+            'fontSizePt':font_size_pt,'fontFamily':font_family,
+            'printableWidthMm':PRINTABLE_MM,'totalWidthMm':round(sum(fixed_widths)+total_marks*width,3),
             'weekStart':groups[0].week,'weekEnd':groups[-1].week,
         })
     return wb,layouts,blank
@@ -265,7 +348,9 @@ def create_file(obs_path:Path,output_dir:Path,settings:dict):
     weeks,signatures,midterm,final=validate_settings(settings['weeks'],settings['signatures'],settings['midterm'],settings['final'])
     title=(f'İSTANBUL RUMELİ ÜNİVERSİTESİ {settings["academicYear"]} EĞİTİM ÖĞRETİM YILI '
            f'{core.tr_buyuk(settings["semester"])} DÖNEMİ DERS YOKLAMA LİSTESİ')
-    wb,layouts,blank=build_workbook(students,department,settings['course'],settings['instructor'],title,weeks,signatures,midterm,final)
+    wb,layouts,blank=build_workbook(
+        students,department,settings['course'],settings['instructor'],title,weeks,signatures,midterm,final,
+        settings['minMarkWidthMm'],settings['fontSizePt'],settings['fontFamily'],settings['nameMaxWidthMm'])
     output_dir.mkdir(parents=True,exist_ok=True)
     course_code=re.sub(r'[^\w-]','',settings['course'].split('-',1)[0],flags=re.UNICODE)[:30] or 'DERS'
     branch=re.sub(r'[^\w-]','',obs_path.stem.rsplit('-',1)[-1],flags=re.UNICODE).upper()[:26] or 'SUBE'

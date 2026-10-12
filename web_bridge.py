@@ -22,7 +22,14 @@ def generate(payload):
     weeks, signatures, midterm, final = layout.validate_settings(
         settings.get('weeks'), settings.get('signatures'),
         settings.get('midterm'), settings.get('final'))
-    settings.update(weeks=weeks, signatures=signatures, midterm=midterm, final=final)
+    min_mark_mm, font_size_pt, font_family, name_max_mm = layout.validate_presentation(
+        settings.get('minMarkWidthMm', layout.MARK_MIN_MM),
+        settings.get('fontSizePt', layout.FONT_DEFAULT_PT),
+        settings.get('fontFamily', 'Aptos'),
+        settings.get('nameMaxWidthMm', layout.NAME_MAX_DEFAULT_MM))
+    settings.update(weeks=weeks, signatures=signatures, midterm=midterm, final=final,
+                    minMarkWidthMm=min_mark_mm, fontSizePt=font_size_pt,
+                    fontFamily=font_family, nameMaxWidthMm=name_max_mm)
     course = ' '.join(str(settings.get('course') or '').split())
     instructor = ' '.join(str(settings.get('instructor') or '').split())
     if not course or not instructor:
@@ -40,7 +47,10 @@ def generate(payload):
         shutil.rmtree(output)
     output.mkdir(parents=True)
     result={'results':[], 'errors':[], 'configuration':{'weeks':weeks,'signatures':signatures,
-           'midterm':midterm,'final':final,'horizontalSections':len(layout.page_plan(weeks,signatures,midterm,final))}}
+           'midterm':midterm,'final':final,'minMarkWidthMm':min_mark_mm,
+           'fontSizePt':font_size_pt,'fontFamily':font_family,'nameMaxWidthMm':name_max_mm,
+           'horizontalSectionsConservative':len(layout.page_plan(weeks,signatures,midterm,final,min_mark_mm,
+              (layout.SERIAL_WIDTH_MM,layout.STUDENT_NUMBER_WIDTH_MM,name_max_mm)))}}
     for index, submitted in enumerate(settings.get('files', []), 1):
         try:
             name=_clean_name(submitted['name'])
