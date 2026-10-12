@@ -69,3 +69,93 @@
 .a4-preview-viewport.is-actual-size{max-height:660px}
 .a4-preview-card{max-width:1130px;margin-left:auto;margin-right:auto}
 @media(max-width:580px){.a4-preview-viewport.is-actual-size{max-height:480px}}
+
+/* v8 — Dashboard layout: full-width upload; settings left; sticky A4 preview right. */
+.workspace-grid{
+  display:grid;
+  grid-template-columns:minmax(0, .97fr) minmax(0, 1.03fr);
+  grid-template-rows:auto auto;
+  align-items:start;
+  gap:14px;
+}
+.workspace-grid>.upload-card{
+  grid-column:1 / -1;
+  grid-row:1;
+  min-height:0;
+}
+.workspace-grid>.upload-card .dropzone{min-height:105px}
+.workspace-grid>.upload-card .file-list{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));
+  gap:8px;
+}
+.workspace-grid>.settings-stack{
+  grid-column:1;
+  grid-row:2;
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:auto auto;
+  align-content:start;
+  align-self:start;
+  min-width:0;
+}
+.workspace-grid>.a4-preview-card{
+  grid-column:2;
+  grid-row:2;
+  position:sticky;
+  top:14px;
+  align-self:start;
+  min-width:0;
+  max-width:none;
+  max-height:calc(100dvh - 28px);
+  margin:0;
+  display:flex;
+  flex-direction:column;
+}
+.workspace-grid>.a4-preview-card .a4-preview-toolbar{
+  flex-direction:column;
+  align-items:stretch;
+  gap:8px;
+}
+.workspace-grid>.a4-preview-card .a4-preview-toolbar p{max-width:none}
+.workspace-grid>.a4-preview-card .a4-preview-controls{flex-wrap:wrap}
+.workspace-grid>.a4-preview-card .a4-preview-controls select{
+  min-width:105px;
+  max-width:none;
+  flex:1;
+}
+.workspace-grid>.a4-preview-card .a4-preview-viewport{
+  flex:1 1 auto;
+  min-height:170px;
+  max-height:65vh;
+  overflow:auto;
+}
+.workspace-grid>.a4-preview-card .a4-preview-viewport.is-actual-size{
+  max-height:65vh;
+}
+.workspace-grid>.a4-preview-card .a4-preview-disclaimer{flex-shrink:0}
+@media (max-width:1020px){
+  .workspace-grid{
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:auto auto auto;
+  }
+  .workspace-grid>.upload-card{grid-column:1;grid-row:1}
+  .workspace-grid>.settings-stack{
+    grid-column:1;
+    grid-row:2;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-template-rows:auto;
+  }
+  .workspace-grid>.a4-preview-card{
+    grid-column:1;
+    grid-row:3;
+    position:static;
+    max-height:none;
+  }
+  .workspace-grid>.a4-preview-card .a4-preview-viewport{max-height:none}
+  .workspace-grid>.a4-preview-card .a4-preview-viewport.is-actual-size{max-height:660px}
+}
+@media (max-width:760px){
+  .workspace-grid>.settings-stack{grid-template-columns:minmax(0,1fr)}
+  .workspace-grid>.a4-preview-card .a4-preview-viewport.is-actual-size{max-height:480px}
+}
