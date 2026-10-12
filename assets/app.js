@@ -6,6 +6,8 @@
   const dropzone = $('#dropzone');
   const filesUI = $('#file-list');
   const courseUI = $('#course');
+  const courseCodeUI = $('#course-code');
+  const courseNameUI = $('#course-name');
   const instructorUI = $('#instructor');
   const yearUI = $('#academic-year');
   const semesterUI = $('#semester');
@@ -22,7 +24,7 @@
   let runtime = null;
   let generatedCourse = '';
 
-  // Local device clock, not server time.
+  // Local device clock, not the server clock. September–January: Güz; February–August: Bahar.
   const defaults = helpers.academicDefaults(new Date());
   for (let start = defaults.startYear - 4; start <= defaults.startYear + 5; start++) {
     const academicYear = `${start}-${start + 1}`;
@@ -30,7 +32,7 @@
   }
   yearUI.value = defaults.year;
   semesterUI.value = defaults.semester;
-  function syncSidebarYear() { $('#sidebar-year').textContent = yearUI.value.replace('-', '–'); }
+  function syncSidebarYear() { $('#sidebar-year').textContent = yearUI.value.replace('-', '–'); $('#footer-year').textContent = yearUI.value.replace('-', '–'); }
   yearUI.addEventListener('change', syncSidebarYear);
   syncSidebarYear();
 
@@ -38,15 +40,28 @@
   const html = (value) => String(value ?? '').replace(/[&<>"']/g, ch => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch]));
   const safeName = (value) => String(value).replace(/\\/g, '/').split('/').pop().replace(/[^\p{L}\p{N}_\.\- ]/gu, '_').replace(/^[. ]+|[. ]+$/g, '').slice(0,110) || 'obs.xlsx';
   const tick = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  const signatureCount = () => Number(document.querySelector('input[name="signatures"]:checked').value);
+  const signatureCount = () => Number($('#signature-select').value);
 
   function renderFiles() {
-    filesUI.innerHTML = uploaded.map((file, i) => `<div class="file-item"><span class="file-icon">XLS</span><span class="file-info"><b>${html(file.name)}</b><small>${humanBytes(file.size)}</small></span><button class="remove-btn" title="Dosyayı kaldır" aria-label="${html(file.name)} dosyasını kaldır" data-remove="${i}">×</button></div>`).join('');
-    generateBtn.disabled = busy || uploaded.length === 0 || !courseUI.value.trim() || !instructorUI.value.trim();
+    $('#upload-count').textContent = `(${uploaded.length})`;
+    $('#clear-files').hidden = uploaded.length === 0;
+    filesUI.innerHTML = uploaded.length ? uploaded.map((file, i) => `<div class="file-item"><span class="file-ok" aria-hidden="true">✓</span><span class="file-icon" aria-hidden="true">X</span><span class="file-info"><b>${html(file.name)}</b><small>${file.studentCount ? `${file.studentCount} öğrenci` : humanBytes(file.size)}</small></span><button class="remove-btn" type="button" title="Dosyayı kaldır" aria-label="${html(file.name)} dosyasını kaldır" data-remove="${i}">×</button></div>`).join('') : '<div class="empty-list">Henüz Excel dosyası seçilmedi.</div>';
+    generateBtn.disabled = busy || uploaded.length === 0 || !courseCodeUI.value.trim() || !courseNameUI.value.trim() || !instructorUI.value.trim();
     filesUI.querySelectorAll('[data-remove]').forEach(button => button.addEventListener('click', () => {
       uploaded.splice(Number(button.dataset.remove), 1);
+      invalidateResults();
       renderFiles();
     }));
+  }
+
+  function invalidateResults() {
+    if (busy) return;
+    built = [];
+    $('#results-placeholder').hidden = false;
+    $('#results-ready').hidden = true;
+    $('#result-details').hidden = true;
+    results.hidden = false;
+    status.hidden = true;
   }
 
   function addFiles(list) {
@@ -75,10 +90,25 @@
     event.preventDefault(); dropzone.classList.remove('dragging');
   });
   dropzone.addEventListener('drop', event => addFiles(event.dataTransfer.files));
-  [courseUI, instructorUI].forEach(el => el.addEventListener('input', renderFiles));
+  [courseCodeUI,courseNameUI].forEach(field => field.addEventListener('input', () => {
+    courseUI.value = `${courseCodeUI.value.trim()} - ${courseNameUI.value.trim()}`;
+    invalidateResults();
+    renderFiles();
+  }));
+  instructorUI.addEventListener('input', () => { invalidateResults(); renderFiles(); });
+  [yearUI, semesterUI, $('#signature-select')].forEach(el => el.addEventListener('change', invalidateResults));
+  $('#clear-files').addEventListener('click', () => { uploaded.length = 0; invalidateResults(); renderFiles(); });
+
+  const help = $('#help-panel');
+  const helpToggle = $('#help-toggle');
+  function closeHelp() { help.hidden = true; helpToggle.setAttribute('aria-expanded','false'); helpToggle.focus(); }
+  helpToggle.addEventListener('click', () => { help.hidden = false; helpToggle.setAttribute('aria-expanded','true'); $('#help-close').focus(); });
+  $('#help-close').addEventListener('click', closeHelp);
+  help.addEventListener('click', event => { if(event.target === help) closeHelp(); });
+  document.addEventListener('keydown', event => { if(event.key === 'Escape' && !help.hidden) closeHelp(); });
 
   function showStatus(title, detail, failed = false, completed = false) {
-    status.hidden = false;
+    status.hidden = completed && !failed;
     status.classList.toggle('failed', failed);
     status.classList.toggle('success', completed && !failed);
     $('#status-title').textContent = title;
@@ -174,14 +204,26 @@
   function renderResults(data) {
     results.hidden = false;
     $('#results-summary').textContent = `${data.results.length} dosya işlendi · ${built.filter(file=>file.ext === 'pdf').length} PDF üretildi`;
+    $('#results-placeholder').hidden = true;
+    $('#results-ready').hidden = false;
+    $('#result-details').hidden = data.results.length === 0 && data.errors.length === 0;
+    const xls = built.filter(file => file.ext === 'xlsx');
+    const pdf = built.filter(file => file.ext === 'pdf');
+    $('#download-excel').disabled = xls.length === 0;
+    $('#download-pdf').disabled = pdf.length === 0;
     $('#download-all').disabled = built.length === 0;
+    $('#ready-title').textContent = data.errors.length ? 'Belgeler uyarılarla oluşturuldu.' : 'Yoklama listeleri başarıyla oluşturuldu!';
+    for(const item of data.results) {
+      const uploadedFile = uploaded.find(file => file.name === item.input);
+      if(uploadedFile) uploadedFile.studentCount = item.count;
+    }
     $('#result-list').innerHTML = data.results.map((item, i) => {
       const related = built.filter(file => file.inputIndex === i);
       const pdfs = related.filter(file => file.ext === 'pdf');
       return `<div class="result-item"><span class="file-icon">✓</span><div class="result-details"><b>${html(item.filename)}</b><small>${item.count} öğrenci · ${item.blankRows} boş satır · ${item.sheets.reduce((n,s)=>n+s.pages.length,0)} sayfa</small>${item.warnings.map(w => `<div class="warn">⚠ ${html(w)}</div>`).join('')}</div><div class="result-actions">${related.filter(file => file.ext === 'xlsx').map(file=>`<button class="download-btn" data-download="${html(file.id)}">↓ Excel</button>`).join('')}${pdfs.map(file=>`<button class="download-btn" data-download="${html(file.id)}">↓ PDF · ${html(file.label)}</button>`).join('')}</div></div>`;
     }).join('');
     $('#error-list').innerHTML = data.errors.map(error=>`<div class="error-item"><b>${html(error.file)}:</b> ${html(error.message)}</div>`).join('');
-    $('[id="results"]').scrollIntoView({behavior:'smooth', block:'start'});
+    // Keep the page position stable; the completed summary is below the generate button.
     document.querySelectorAll('[data-download]').forEach(button => button.addEventListener('click', () => {
       const item = built.find(file=>file.id === button.dataset.download);
       if(item) download(blobFor(item.bytes, item.mime), item.name);
@@ -189,9 +231,10 @@
   }
 
   async function generate() {
-    if (busy || !uploaded.length || !courseUI.value.trim() || !instructorUI.value.trim()) return;
+    if (busy || !uploaded.length || !courseCodeUI.value.trim() || !courseNameUI.value.trim() || !instructorUI.value.trim()) return;
     busy = true;
     results.hidden = true;
+    status.hidden = false;
     built = [];
     renderFiles();
     const signatures = signatureCount();
@@ -245,20 +288,37 @@
     }
   }
 
-  generateBtn.addEventListener('click', generate);
-  $('#download-all').addEventListener('click', async () => {
-    if (!built.length || typeof JSZip === 'undefined') return;
+  async function downloadSelection(ext) {
+    const selected = ext === 'all' ? built : built.filter(item => item.ext === ext);
+    if (!selected.length || typeof JSZip === 'undefined') return;
+    const base = helpers.archiveFilename(generatedCourse).replace(/\.zip$/i, '');
     try {
+      if (selected.length === 1 && ext !== 'all') {
+        const item = selected[0];
+        download(blobFor(item.bytes, item.mime), item.name);
+        showStatus('İndirme hazır', `${item.name} indirilmeye hazır.`, false, true);
+        return;
+      }
+      showStatus('ZIP hazırlanıyor', `${selected.length} çıktı bir araya getiriliyor.`);
+      await tick();
       const zip = new JSZip();
-      for (const item of built) zip.file(item.zipName, item.bytes);
-      showStatus('ZIP hazırlanıyor', `${built.length} çıktı bir araya getiriliyor.`);
+      for (const item of selected) {
+        const filename = ext === 'all' ? item.zipName : item.name;
+        zip.file(filename, item.bytes);
+      }
       const data = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:4}});
-      download(data, helpers.archiveFilename(generatedCourse));
-      showStatus('İndirme hazır', 'ZIP dosyası oluşturuldu.', false, true);
-    } catch (error) {
-      console.error('ZIP creation error:', error);
-      showStatus('ZIP hazırlanamadı', error.message || String(error), true);
+      const suffix = ext === 'xlsx' ? ' - Excel' : ext === 'pdf' ? ' - PDF' : '';
+      download(data, `${base}${suffix}.zip`);
+      showStatus('İndirme hazır', `${selected.length} dosya indirilmeye hazır.`, false, true);
+    } catch(error) {
+      console.error('Download creation error:', error);
+      showStatus('İndirme hazırlanamadı', error.message || String(error), true);
     }
-  });
+  }
+
+  generateBtn.addEventListener('click', generate);
+  $('#download-all').addEventListener('click', () => downloadSelection('all'));
+  $('#download-excel').addEventListener('click', () => downloadSelection('xlsx'));
+  $('#download-pdf').addEventListener('click', () => downloadSelection('pdf'));
   renderFiles();
 })();

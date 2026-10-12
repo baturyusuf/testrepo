@@ -92,3 +92,16 @@ Python testi için `openpyxl` yüklü olmalıdır.
 - Sol menü ve ana ekran İstanbul Rumeli Üniversitesi'nin özgün bordo-kırmızı ve beyaz renkleriyle düzenlenmiştir.
 - `assets/rumeli-logo.png`, kullanıcı tarafından sağlanan üniversite amblemidir; hem sayfada hem sekme favicon'unda kullanılır.
 - Üretim sürerken animasyonlu işaret gösterilir; tamamlanan işlerde sabit yeşil tik, hatalarda uyarı işareti görünür.
+
+## Referans görseline uygun arayüz (v4)
+
+- Beyaz kurumsal yan panel, kampüs arka planı ve sloganlar
+- Bordo/kırmızı tanıtım bandı ve üç aşamalı kullanım akışı
+- Yan yana OBS dosya yükleme ve ders/dönem bilgi kartları
+- Ders kodu ve ders adı ayrı yazılır; mevcut Python algoritmasına birleşik ders metni gönderilir
+- Haftalık imza sayısı 1/2/3 olarak seçilir. Hafta sayısı, orijinal şablonların **16 haftalık** yapısı nedeniyle sabittir.
+- Excel, PDF ve tüm dosyalar için ayrı indirme kontrolleri (birden fazla çıktıda ZIP)
+- Sağlam çalışma için yardım penceresi, sürükle bırak, dosya kaldırma ve işlem durumları
+- Geliştirici bilgisi: Arş. Gör. Hüseyin Eren Demirtaş
+
+Kullanıcı tarafından iletilen arayüz referansındaki dekoratif görsellerin kırpılmış halleri `assets/` klasöründe bulunmaktadır.
