@@ -7,6 +7,10 @@
   const filesUI = $('#file-list');
   const courseUI = $('#course');
   const instructorUI = $('#instructor');
+  const yearUI = $('#academic-year');
+  const semesterUI = $('#semester');
+  const helpers = window.YoklamaHelpers;
+  if (!helpers) throw new Error('Yoklama tarih ve dosya yardımcıları yüklenemedi.');
   const generateBtn = $('#generate');
   const results = $('#results');
   const status = $('#status');
@@ -16,6 +20,19 @@
   let busy = false;
   let built = [];
   let runtime = null;
+  let generatedCourse = '';
+
+  // Local device clock, not server time.
+  const defaults = helpers.academicDefaults(new Date());
+  for (let start = defaults.startYear - 4; start <= defaults.startYear + 5; start++) {
+    const academicYear = `${start}-${start + 1}`;
+    yearUI.add(new Option(academicYear, academicYear));
+  }
+  yearUI.value = defaults.year;
+  semesterUI.value = defaults.semester;
+  function syncSidebarYear() { $('#sidebar-year').textContent = yearUI.value.replace('-', '–'); }
+  yearUI.addEventListener('change', syncSidebarYear);
+  syncSidebarYear();
 
   const humanBytes = (bytes) => bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1048576).toFixed(1)} MB`;
   const html = (value) => String(value ?? '').replace(/[&<>"']/g, ch => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch]));
@@ -177,6 +194,9 @@
     built = [];
     renderFiles();
     const signatures = signatureCount();
+    const course = courseUI.value.trim();
+    const academicYear = yearUI.value;
+    const semester = semesterUI.value;
     try {
       const py = await getRuntime();
       showStatus('Dosyalar okunuyor', `${uploaded.length} OBS listesi tarayıcıda işleniyor.`);
@@ -189,7 +209,7 @@
         py.FS.writeFile(`${path}/${safeName(f.name)}`, new Uint8Array(await f.arrayBuffer()));
         descriptors.push({name:f.name});
       }
-      const payload = JSON.stringify({signatures, course:courseUI.value.trim(), instructor:instructorUI.value.trim(), files:descriptors});
+      const payload = JSON.stringify({signatures, course, instructor:instructorUI.value.trim(), academicYear, semester, files:descriptors});
       py.globals.set('browser_payload', payload);
       const response = await py.runPythonAsync('import web_bridge; web_bridge.generate(browser_payload)');
       const manifest = JSON.parse(response);
@@ -211,6 +231,7 @@
           }
         }
       }
+      generatedCourse = course;
       renderResults(manifest);
       if (manifest.errors.length) showStatus('İşlem uyarılarla tamamlandı', `${built.length} çıktı hazır, ${manifest.errors.length} hata mevcut.`, true);
       else showStatus('Yoklamalar hazır', `${built.length} Excel/PDF dosyası üretildi. İsterseniz tümünü ZIP olarak indirebilirsiniz.`);
@@ -230,7 +251,7 @@
     for (const item of built) zip.file(item.zipName, item.bytes);
     showStatus('ZIP hazırlanıyor', `${built.length} çıktı bir araya getiriliyor.`);
     const data = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:4}});
-    download(data,'Yoklamalar.zip');
+    download(data, helpers.archiveFilename(generatedCourse));
     showStatus('İndirme hazır', 'ZIP dosyası oluşturuldu.');
   });
   renderFiles();
