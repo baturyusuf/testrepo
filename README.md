@@ -86,3 +86,9 @@ python tests/test_web_bridge.py
 ```
 
 Python testi için `openpyxl` yüklü olmalıdır.
+
+## Kurumsal görsel kimlik
+
+- Sol menü ve ana ekran İstanbul Rumeli Üniversitesi'nin özgün bordo-kırmızı ve beyaz renkleriyle düzenlenmiştir.
+- `assets/rumeli-logo.png`, kullanıcı tarafından sağlanan üniversite amblemidir; hem sayfada hem sekme favicon'unda kullanılır.
+- Üretim sürerken animasyonlu işaret gösterilir; tamamlanan işlerde sabit yeşil tik, hatalarda uyarı işareti görünür.

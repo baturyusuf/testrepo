@@ -3,16 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#111b35" />
+  <meta name="theme-color" content="#910811" />
   <meta name="description" content="OBS öğrenci listelerinden Excel ve PDF ders yoklaması oluşturun. Dosyalar tarayıcınızda işlenir." />
   <title>Yoklama Oluşturucu · Rumeli</title>
-  <link rel="stylesheet" href="./assets/app.css?v=2" />
+  <link rel="icon" type="image/png" href="./assets/rumeli-logo.png?v=3" />
+  <link rel="apple-touch-icon" href="./assets/rumeli-logo.png?v=3" />
+  <link rel="stylesheet" href="./assets/app.css?v=3" />
   <link rel="stylesheet" href="./assets/pdf.css" />
 </head>
 <body>
   <div class="app">
     <aside class="sidebar">
-      <a class="brand" href="./" aria-label="Yoklama Oluşturucu ana sayfa"><span class="brand-symbol">Y<span>·</span></span><span><b>YOKLAMA</b><small>OLUŞTURUCU</small></span></a>
+      <a class="brand" href="./" aria-label="Yoklama Oluşturucu ana sayfa"><img class="brand-logo" src="./assets/rumeli-logo.png?v=3" alt="İstanbul Rumeli Üniversitesi logosu" width="54" height="54" /><span><b>YOKLAMA</b><small>OLUŞTURUCU</small></span></a>
       <div class="side-label">ÇALIŞMA ALANI</div>
       <div class="side-nav active"><span class="nav-icon">▦</span> Yeni yoklama <span class="nav-mark"></span></div>
       <div class="sidebar-info"><span class="privacy-dot"></span><b>Yerel veri işleme</b><p>Öğrenci listeleri bir sunucuya gönderilmez. Dosyalar bu tarayıcıda işlenir.</p></div>
@@ -20,9 +22,9 @@
     </aside>
 
     <main class="main">
-      <header class="topbar"><span><span class="breadcrumb">Araçlar</span><span class="slash">/</span> Yoklama oluştur</span><span class="top-pill"><span></span> Tarayıcıda çalışır</span></header>
+      <header class="topbar"><span><span class="breadcrumb">Araçlar</span><span class="slash">/</span> Yoklama oluştur</span><div class="topbar-right"><span class="top-university"><img src="./assets/rumeli-logo.png?v=3" alt="" width="23" height="23" /> İstanbul Rumeli Üniversitesi</span><span class="top-pill"><span></span> Tarayıcıda çalışır</span></div></header>
       <div class="content">
-        <div class="intro"><div class="eyebrow">DERS YÖNETİMİ <span> / </span> 01</div><h1>Yoklama listesi oluşturun<span>.</span></h1><ol class="intro-steps"><li>OBS öğrenci listelerini (.xlsx) yükleyin.</li><li>İmza sayısını, eğitim yılını, dönemi ve ders bilgilerini seçin.</li><li>Yoklamaları oluşturup Excel ve A4 PDF dosyalarını indirin.</li></ol></div>
+        <div class="intro"><img class="intro-emblem" src="./assets/rumeli-logo.png?v=3" alt="İstanbul Rumeli Üniversitesi logosu" width="112" height="112" /><div class="eyebrow">DERS YÖNETİMİ <span> / </span> 01</div><h1>Yoklama listesi oluşturun<span>.</span></h1><ol class="intro-steps"><li>OBS öğrenci listelerini (.xlsx) yükleyin.</li><li>İmza sayısını, eğitim yılını, dönemi ve ders bilgilerini seçin.</li><li>Yoklamaları oluşturup Excel ve A4 PDF dosyalarını indirin.</li></ol></div>
         <div class="progress-path"><span class="step on"><span class="step-num">1</span>Dosyalar</span><span class="step-line"></span><span class="step"><span class="step-num">2</span>Ders bilgileri</span><span class="step-line"></span><span class="step"><span class="step-num">3</span>Çıktılar</span></div>
 
         <section class="card" aria-labelledby="upload-title">
@@ -41,7 +43,7 @@
         </section>
 
         <div class="actions"><div class="action-hint"><span class="privacy-dot"></span> Öğrenci verileri cihazınızdan ayrılmaz.</div><button id="generate" class="primary-btn" type="button" disabled><span>Yoklamaları oluştur</span><span class="arrow">→</span></button></div>
-        <section id="status" class="status" aria-live="polite" hidden><span id="status-spinner" class="spinner"></span><div><b id="status-title">Hazırlanıyor</b><p id="status-detail"></p></div></section>
+        <section id="status" class="status" aria-live="polite" hidden><span id="status-spinner" class="spinner" aria-hidden="true"></span><div><b id="status-title">Hazırlanıyor</b><p id="status-detail"></p></div></section>
         <section id="results" class="results" aria-live="polite" hidden><div class="results-head"><div><span class="section-index">03 <span> / ÇIKTILAR</span></span><h2>Dosyalar hazır</h2><p id="results-summary"></p></div><button type="button" id="download-all" class="primary-btn small">Tümünü ZIP indir <span>↓</span></button></div><div id="result-list"></div><div id="error-list"></div></section>
         <footer class="footer">OBS Yoklama Oluşturucu <span>·</span> Yerel işleme <span>·</span> Excel ve PDF</footer>
       </div>
@@ -53,6 +55,6 @@
   <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
   <script defer src="./assets/helpers.js"></script>
-  <script defer src="./assets/app.js?v=2"></script>
+  <script defer src="./assets/app.js?v=3"></script>
 </body>
 </html>

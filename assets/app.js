@@ -77,9 +77,10 @@
   dropzone.addEventListener('drop', event => addFiles(event.dataTransfer.files));
   [courseUI, instructorUI].forEach(el => el.addEventListener('input', renderFiles));
 
-  function showStatus(title, detail, failed = false) {
+  function showStatus(title, detail, failed = false, completed = false) {
     status.hidden = false;
     status.classList.toggle('failed', failed);
+    status.classList.toggle('success', completed && !failed);
     $('#status-title').textContent = title;
     $('#status-detail').textContent = detail;
   }
@@ -234,7 +235,7 @@
       generatedCourse = course;
       renderResults(manifest);
       if (manifest.errors.length) showStatus('İşlem uyarılarla tamamlandı', `${built.length} çıktı hazır, ${manifest.errors.length} hata mevcut.`, true);
-      else showStatus('Yoklamalar hazır', `${built.length} Excel/PDF dosyası üretildi. İsterseniz tümünü ZIP olarak indirebilirsiniz.`);
+      else showStatus('Yoklamalar hazır', `${built.length} Excel/PDF dosyası üretildi. İsterseniz tümünü ZIP olarak indirebilirsiniz.`, false, true);
     } catch(error) {
       console.error('OBS generator error:', error);
       showStatus('İşlem tamamlanamadı', error.message || String(error), true);
@@ -247,12 +248,17 @@
   generateBtn.addEventListener('click', generate);
   $('#download-all').addEventListener('click', async () => {
     if (!built.length || typeof JSZip === 'undefined') return;
-    const zip = new JSZip();
-    for (const item of built) zip.file(item.zipName, item.bytes);
-    showStatus('ZIP hazırlanıyor', `${built.length} çıktı bir araya getiriliyor.`);
-    const data = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:4}});
-    download(data, helpers.archiveFilename(generatedCourse));
-    showStatus('İndirme hazır', 'ZIP dosyası oluşturuldu.');
+    try {
+      const zip = new JSZip();
+      for (const item of built) zip.file(item.zipName, item.bytes);
+      showStatus('ZIP hazırlanıyor', `${built.length} çıktı bir araya getiriliyor.`);
+      const data = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:4}});
+      download(data, helpers.archiveFilename(generatedCourse));
+      showStatus('İndirme hazır', 'ZIP dosyası oluşturuldu.', false, true);
+    } catch (error) {
+      console.error('ZIP creation error:', error);
+      showStatus('ZIP hazırlanamadı', error.message || String(error), true);
+    }
   });
   renderFiles();
 })();
