@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#111b35" />
   <meta name="description" content="OBS öğrenci listelerinden Excel ve PDF ders yoklaması oluşturun. Dosyalar tarayıcınızda işlenir." />
   <title>Yoklama Oluşturucu · Rumeli</title>
-  <link rel="stylesheet" href="./assets/app.css" />
+  <link rel="stylesheet" href="./assets/app.css?v=2" />
   <link rel="stylesheet" href="./assets/pdf.css" />
 </head>
 <body>
@@ -16,13 +16,13 @@
       <div class="side-label">ÇALIŞMA ALANI</div>
       <div class="side-nav active"><span class="nav-icon">▦</span> Yeni yoklama <span class="nav-mark"></span></div>
       <div class="sidebar-info"><span class="privacy-dot"></span><b>Yerel veri işleme</b><p>Öğrenci listeleri bir sunucuya gönderilmez. Dosyalar bu tarayıcıda işlenir.</p></div>
-      <div class="sidebar-foot"><span>İstanbul Rumeli Üniversitesi</span><small>2026–2027 · Ders yoklama aracı</small></div>
+      <div class="sidebar-foot"><span>İstanbul Rumeli Üniversitesi</span><small><span id="sidebar-year">2026–2027</span> · Ders yoklama aracı</small><p class="developer-credit">Bu uygulama Arş. Gör. Hüseyin Eren Demirtaş tarafından geliştirilmiştir.</p></div>
     </aside>
 
     <main class="main">
       <header class="topbar"><span><span class="breadcrumb">Araçlar</span><span class="slash">/</span> Yoklama oluştur</span><span class="top-pill"><span></span> Tarayıcıda çalışır</span></header>
       <div class="content">
-        <div class="intro"><div class="eyebrow">DERS YÖNETİMİ <span> / </span> 01</div><h1>Yoklama listesi oluşturun<span>.</span></h1><p>OBS öğrenci listelerinizi yükleyin; imza sayısını ve ders bilgilerini seçin. Excel ve yazdırılabilir A4 PDF dosyalarınızı tek seferde hazırlayın.</p></div>
+        <div class="intro"><div class="eyebrow">DERS YÖNETİMİ <span> / </span> 01</div><h1>Yoklama listesi oluşturun<span>.</span></h1><ol class="intro-steps"><li>OBS öğrenci listelerini (.xlsx) yükleyin.</li><li>İmza sayısını, eğitim yılını, dönemi ve ders bilgilerini seçin.</li><li>Yoklamaları oluşturup Excel ve A4 PDF dosyalarını indirin.</li></ol></div>
         <div class="progress-path"><span class="step on"><span class="step-num">1</span>Dosyalar</span><span class="step-line"></span><span class="step"><span class="step-num">2</span>Ders bilgileri</span><span class="step-line"></span><span class="step"><span class="step-num">3</span>Çıktılar</span></div>
 
         <section class="card" aria-labelledby="upload-title">
@@ -35,6 +35,7 @@
           <div class="card-head"><div><span class="section-index">02 <span> / AYARLAR</span></span><h2 id="settings-title">Yoklama ayarları</h2><p>Seçilen şablon tüm yüklenen dosyalara uygulanır.</p></div></div>
           <div class="field-label">Haftalık imza sayısı <span class="required">*</span></div>
           <div class="signature-options" role="radiogroup" aria-label="Haftalık imza sayısı"><label class="signature-option"><input type="radio" name="signatures" value="1"><span class="sig-number">01</span><span><b>1 imza</b><small>Haftada 1 ders saati</small></span><span class="check-circle"></span></label><label class="signature-option"><input type="radio" name="signatures" value="2"><span class="sig-number">02</span><span><b>2 imza</b><small>Haftada 2 ders saati</small></span><span class="check-circle"></span></label><label class="signature-option"><input type="radio" name="signatures" value="3" checked><span class="sig-number">03</span><span><b>3 imza</b><small>Haftada 3 ders saati</small></span><span class="check-circle"></span></label></div>
+          <div class="fields academic-fields"><label><span class="field-label">Eğitim öğretim yılı <span class="required">*</span></span><select id="academic-year" required aria-label="Eğitim öğretim yılı"></select></label><label><span class="field-label">Dönem <span class="required">*</span></span><select id="semester" required aria-label="Dönem"><option value="Güz">Güz</option><option value="Bahar">Bahar</option></select></label></div>
           <div class="fields"><label><span class="field-label">Ders kodu ve adı <span class="required">*</span></span><input id="course" type="text" autocomplete="off" placeholder="Örn. BLG103 - Programlama I" required /></label><label><span class="field-label">Öğretim elemanı <span class="required">*</span></span><input id="instructor" type="text" autocomplete="off" placeholder="Örn. Dr. Öğr. Üyesi Ad Soyad" required /></label></div>
           <div class="notice"><span class="notice-icon">i</span><span><b>Şablon düzeni korunur.</b> Öğrenci sayısına göre otomatik A4 sayfalama yapılır ve son sayfaya boş kayıt satırları eklenir.</span></div>
         </section>
@@ -51,6 +52,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
-  <script defer src="./assets/app.js"></script>
+  <script defer src="./assets/helpers.js"></script>
+  <script defer src="./assets/app.js?v=2"></script>
 </body>
 </html>
