@@ -20,3 +20,8 @@
 .print-page .student-row:nth-child(odd) td:not(.exam-cell){background:#fff}
 .print-page .page-mark{position:absolute;bottom:10px;right:27px;font-size:9px;color:#555}
 @media print{body{background:white!important}.app{display:none!important}#print-stage{position:static;width:auto;z-index:auto}.print-page{page-break-after:always;break-after:page;margin:0;box-shadow:none}@page{size:A4 landscape;margin:0}}
+/* Dynamic signature columns are sized from the same physical mm plan as Excel. */
+.print-page td.name{overflow-wrap:anywhere;word-break:normal;font-size:10.5px}
+.print-page .week-top th,.print-page .week-sub th{overflow-wrap:anywhere;word-break:normal}
+.print-page .exam-header{font-size:8px;line-height:1.1}
+.print-page .student-row{max-height:33px}

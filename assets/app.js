@@ -11,6 +11,9 @@
   const instructorUI = $('#instructor');
   const yearUI = $('#academic-year');
   const semesterUI = $('#semester');
+  const weekUI = $('#week-count');
+  const midtermUI = $('#midterm-week');
+  const finalUI = $('#final-week');
   const helpers = window.YoklamaHelpers;
   if (!helpers) throw new Error('Yoklama tarih ve dosya yardımcıları yüklenemedi.');
   const generateBtn = $('#generate');
@@ -41,12 +44,42 @@
   const safeName = (value) => String(value).replace(/\\/g, '/').split('/').pop().replace(/[^\p{L}\p{N}_\.\- ]/gu, '_').replace(/^[. ]+|[. ]+$/g, '').slice(0,110) || 'obs.xlsx';
   const tick = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   const signatureCount = () => Number($('#signature-select').value);
+  const weekCount = () => Number(weekUI.value);
+  const midtermWeek = () => Number(midtermUI.value);
+  const finalWeek = () => Number(finalUI.value);
+
+  function syncExamOptions() {
+    const total = weekCount();
+    const oldMidterm = Number(midtermUI.value) || 8;
+    const oldFinal = Number(finalUI.value) || 16;
+    midtermUI.replaceChildren(...Array.from({length:total - 1},(_,i)=>new Option(String(i+1),String(i+1))));
+    finalUI.replaceChildren(...Array.from({length:total - 1},(_,i)=>new Option(String(i+2),String(i+2))));
+    midtermUI.value = String(Math.min(oldMidterm,total-1));
+    finalUI.value = String(Math.min(oldFinal,total));
+    updatePlanPreview();
+  }
+  function updatePlanPreview() {
+    const node = $('#layout-preview');
+    try {
+      const plan = helpers.paperLayout(weekCount(),signatureCount(),midtermWeek(),finalWeek());
+      const minWidth = Math.min(...plan.map(p=>p.minWidthMm));
+      node.textContent = `A4 yatay: ${plan.length} bölüm · imza alanı en az ${minWidth.toFixed(1)} mm · her sayfada en fazla 17 öğrenci`;
+      node.classList.remove('layout-error');
+      node.title = plan.map(p=>`${p.start}–${p.end}. haftalar (${p.columns} sütun)`).join(' | ');
+      return true;
+    } catch(error) {
+      node.textContent = error.message;
+      node.classList.add('layout-error');
+      return false;
+    }
+  }
+  syncExamOptions();
 
   function renderFiles() {
     $('#upload-count').textContent = `(${uploaded.length})`;
     $('#clear-files').hidden = uploaded.length === 0;
     filesUI.innerHTML = uploaded.length ? uploaded.map((file, i) => `<div class="file-item"><span class="file-ok" aria-hidden="true">✓</span><span class="file-icon" aria-hidden="true">X</span><span class="file-info"><b>${html(file.name)}</b><small>${file.studentCount ? `${file.studentCount} öğrenci` : humanBytes(file.size)}</small></span><button class="remove-btn" type="button" title="Dosyayı kaldır" aria-label="${html(file.name)} dosyasını kaldır" data-remove="${i}">×</button></div>`).join('') : '<div class="empty-list">Henüz Excel dosyası seçilmedi.</div>';
-    generateBtn.disabled = busy || uploaded.length === 0 || !courseCodeUI.value.trim() || !courseNameUI.value.trim() || !instructorUI.value.trim();
+    generateBtn.disabled = busy || uploaded.length === 0 || !courseCodeUI.value.trim() || !courseNameUI.value.trim() || !instructorUI.value.trim() || !updatePlanPreview();
     filesUI.querySelectorAll('[data-remove]').forEach(button => button.addEventListener('click', () => {
       uploaded.splice(Number(button.dataset.remove), 1);
       invalidateResults();
@@ -96,7 +129,10 @@
     renderFiles();
   }));
   instructorUI.addEventListener('input', () => { invalidateResults(); renderFiles(); });
-  [yearUI, semesterUI, $('#signature-select')].forEach(el => el.addEventListener('change', invalidateResults));
+  [yearUI, semesterUI, $('#signature-select'), midtermUI, finalUI].forEach(el => el.addEventListener('change', () => {
+    invalidateResults(); updatePlanPreview(); renderFiles();
+  }));
+  weekUI.addEventListener('change', () => { syncExamOptions(); invalidateResults(); renderFiles(); });
   $('#clear-files').addEventListener('click', () => { uploaded.length = 0; invalidateResults(); renderFiles(); });
 
   const help = $('#help-panel');
@@ -130,16 +166,10 @@
     await py.runPythonAsync("import micropip; await micropip.install('openpyxl==3.1.5')");
     py.FS.mkdirTree('/home/pyodide/work/templates');
     py.FS.mkdirTree('/home/pyodide/work/uploads');
-    for (const src of ['yoklama_olustur.py', 'web_bridge.py']) {
+    for (const src of ['yoklama_olustur.py', 'adaptive_layout.py', 'web_bridge.py']) {
       const response = await fetch(`./${src}`);
       if (!response.ok) throw new Error(`Uygulama dosyası yüklenemedi: ${src}`);
       py.FS.writeFile(`/home/pyodide/${src}`, await response.text());
-    }
-    for (const count of [1, 2, 3]) {
-      const file = `Yoklama-${count}-Sign-Template-Ready-70-Students.xlsx`;
-      const response = await fetch(`./templates/${file}`);
-      if (!response.ok) throw new Error(`Excel şablonu yüklenemedi: ${file}`);
-      py.FS.writeFile(`/home/pyodide/work/templates/${file}`, new Uint8Array(await response.arrayBuffer()));
     }
     runtime = py;
     return py;
@@ -172,16 +202,20 @@
     el.className = 'print-page';
     const groups = sheet.groups;
     const numericCols = groups.reduce((sum, item) => sum + item.span, 0);
-    const rankW = 3.9, noW = 10.2, nameW = 21.1;
-    const sigWidth = (100 - rankW - noW - nameW) / numericCols;
+    const printableMm = sheet.printableWidthMm || 289;
+    const fixed = sheet.fixedWidthsMm || [10,26,58];
+    const markWidth = sheet.markWidthMm || 9;
+    const sheetWidthMm = fixed.reduce((n,v)=>n+v,0) + numericCols * markWidth;
+    const colWidths = [...fixed, ...Array(numericCols).fill(markWidth)];
+    const colDefs = colWidths.map(mm=>`<col style="width:${(mm / sheetWidthMm * 100).toFixed(4)}%">`).join('');
     const firstLine = groups.map(group => group.kind === 'week'
       ? `<th class="week-header" colspan="${group.span}">${html(group.label)}</th>`
       : `<th class="exam-header" colspan="${group.span}" rowspan="2">${html(group.label)}</th>`).join('');
     const secondLine = groups.map(group => group.kind === 'week'
-      ? Array.from({length: group.span}, (_, i) => `<th>${i + 1}. DERS</th>`).join('') : '').join('');
-    const body = rows.map(row => `<tr class="student-row" style="height:${signatures === 3 ? '23.2px' : signatures === 2 ? '33.1px' : '30.7px'}"><td class="rank">${html(row.rank)}</td><td class="num">${html(row.number)}</td><td class="name">${html(row.name)}</td>${groups.map(group => Array.from({length:group.span}, () => `<td class="${group.kind === 'exam' ? 'exam-cell' : ''}"></td>`).join('')).join('')}</tr>`).join('');
-    const colDefs = `<col style="width:${rankW}%"><col style="width:${noW}%"><col style="width:${nameW}%">` + Array.from({length: numericCols}, () => `<col style="width:${sigWidth}%">`).join('');
-    el.innerHTML = `<div class="print-head">${html(sheet.title)}</div><div class="print-meta"><div class="meta-cell"><strong>Ders Kodu ve İsmi</strong><span>${html(sheet.course)}</span></div><div class="meta-cell"><strong>Dersin Öğretim Elemanı ve İmzası</strong><span>${html(sheet.instructor)}</span></div></div><div class="print-department">${html(sheet.department)}</div><table><colgroup>${colDefs}</colgroup><thead><tr class="week-top"><th rowspan="2">SIRA</th><th rowspan="2">NUMARA</th><th rowspan="2">AD SOYAD</th>${firstLine}</tr><tr class="week-sub">${secondLine}</tr></thead><tbody>${body}</tbody></table><span class="page-mark">${html(sheet.name)} · ${pageNum} / ${pageTotal}</span>`;
+      ? Array.from({length: group.span}, (_, i) => `<th>${i + 1}. İMZA</th>`).join('') : '').join('');
+    const body = rows.map(row => `<tr class="student-row" style="height:${((sheet.rowHeightPt || 23.5) * 96/72).toFixed(2)}px"><td class="rank">${html(row.rank)}</td><td class="num">${html(row.number)}</td><td class="name">${html(row.name)}</td>${groups.map(group => Array.from({length:group.span}, () => `<td class="${group.kind === 'exam' ? 'exam-cell' : ''}"></td>`).join('')).join('')}</tr>`).join('');
+
+    el.innerHTML = `<div class="print-head">${html(sheet.title)}</div><div class="print-meta"><div class="meta-cell"><strong>Ders Kodu ve İsmi</strong><span>${html(sheet.course)}</span></div><div class="meta-cell"><strong>Dersin Öğretim Elemanı ve İmzası</strong><span>${html(sheet.instructor)}</span></div></div><div class="print-department">${html(sheet.department)}</div><table style="width:${(sheetWidthMm / printableMm * 100).toFixed(3)}%"><colgroup>${colDefs}</colgroup><thead><tr class="week-top"><th rowspan="2">SIRA</th><th rowspan="2">NUMARA</th><th rowspan="2">AD SOYAD</th>${firstLine}</tr><tr class="week-sub">${secondLine}</tr></thead><tbody>${body}</tbody></table><span class="page-mark">${html(sheet.name)} · ${pageNum} / ${pageTotal}</span>`;
     return el;
   }
 
@@ -231,13 +265,16 @@
   }
 
   async function generate() {
-    if (busy || !uploaded.length || !courseCodeUI.value.trim() || !courseNameUI.value.trim() || !instructorUI.value.trim()) return;
+    if (busy || !uploaded.length || !courseCodeUI.value.trim() || !courseNameUI.value.trim() || !instructorUI.value.trim() || !updatePlanPreview()) return;
     busy = true;
     results.hidden = true;
     status.hidden = false;
     built = [];
     renderFiles();
     const signatures = signatureCount();
+    const weeks = weekCount();
+    const midterm = midtermWeek();
+    const final = finalWeek();
     const course = courseUI.value.trim();
     const academicYear = yearUI.value;
     const semester = semesterUI.value;
@@ -253,7 +290,7 @@
         py.FS.writeFile(`${path}/${safeName(f.name)}`, new Uint8Array(await f.arrayBuffer()));
         descriptors.push({name:f.name});
       }
-      const payload = JSON.stringify({signatures, course, instructor:instructorUI.value.trim(), academicYear, semester, files:descriptors});
+      const payload = JSON.stringify({signatures, weeks, midterm, final, course, instructor:instructorUI.value.trim(), academicYear, semester, files:descriptors});
       py.globals.set('browser_payload', payload);
       const response = await py.runPythonAsync('import web_bridge; web_bridge.generate(browser_payload)');
       const manifest = JSON.parse(response);

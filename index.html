@@ -8,8 +8,8 @@
   <title>Yoklama Oluşturucu | İstanbul Rumeli Üniversitesi</title>
   <link rel="icon" type="image/png" href="./assets/rumeli-logo.png?v=4" />
   <link rel="apple-touch-icon" href="./assets/rumeli-logo.png?v=4" />
-  <link rel="stylesheet" href="./assets/app.css?v=4" />
-  <link rel="stylesheet" href="./assets/pdf.css" />
+  <link rel="stylesheet" href="./assets/app.css?v=5" />
+  <link rel="stylesheet" href="./assets/pdf.css?v=5" />
 </head>
 <body>
   <div class="app-shell">
@@ -21,7 +21,7 @@
       </nav>
       <div class="sidebar-spacer"></div>
       <div class="sidebar-campus" aria-hidden="true"></div>
-      <img class="sidebar-slogan" src="./assets/sidebar-slogan.png" alt="Bilimle Daha İleriye" />
+      <img class="sidebar-slogan" src="./assets/bilimle-daha-ileriye.png?v=5" alt="Bilimle Daha İleriye" />
       <div class="sidebar-bottom">
         <div>İstanbul Rumeli Üniversitesi</div>
         <div><span id="sidebar-year">2026–2027</span> · Ders yoklama aracı</div>
@@ -33,7 +33,7 @@
       <header class="masthead">
         <div class="masthead-skyline" aria-hidden="true"></div>
         <div class="masthead-title"><h1>Yoklama Oluşturucu</h1><p>İstanbul Rumeli Üniversitesi için ders yoklama listelerinizi kolayca oluşturun.</p></div>
-        <img class="masthead-slogan" src="./assets/header-slogan.png" alt="Gelenekten Geleceğe" />
+        <img class="masthead-slogan" src="./assets/gelenekten-gelecege.png?v=5" alt="Gelenekten Geleceğe" />
       </header>
 
       <div class="main-content">
@@ -51,7 +51,7 @@
 
         <ol class="steps-strip" aria-label="Kullanım adımları">
           <li><span class="step-number">1</span><span class="step-symbol">▤</span><span>OBS öğrenci listelerini (.xlsx) yükleyin.</span></li>
-          <li><span class="step-number">2</span><span class="step-symbol">☷</span><span>İmza sayısını, eğitim yılını, dönemi ve ders bilgilerini seçin.</span></li>
+          <li><span class="step-number">2</span><span class="step-symbol">☷</span><span>Hafta, imza, sınav haftaları, dönem ve ders bilgilerini seçin.</span></li>
           <li><span class="step-number">3</span><span class="step-symbol">⇩</span><span>Yoklamaları oluşturup Excel ve A4 PDF dosyalarını indirin.</span></li>
         </ol>
 
@@ -85,9 +85,14 @@
             <section class="workspace-card attendance-card" aria-labelledby="attendance-title">
               <header class="card-heading"><span class="number-badge">3</span><h2 id="attendance-title">Yoklama Ayarları</h2></header>
               <div class="field-grid">
-                <label><span class="field-label">Hafta Sayısı <span class="info-tip" title="Mevcut Excel şablonları 16 haftalık dönem için hazırlanmıştır.">ⓘ</span></span><select id="week-count" aria-label="Hafta sayısı" title="Mevcut şablon 16 haftalıktır"><option value="16">16</option></select></label>
-                <label><span class="field-label">Haftalık Atılacak İmza Sayısı <span class="info-tip" title="İmza sayısı Excel şablonunu belirler.">ⓘ</span></span><select id="signature-select" aria-label="Haftalık atılacak imza sayısı"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option></select></label>
+                <label><span class="field-label">Hafta Sayısı <span class="info-tip" title="10–20 hafta arasında seçilebilir; kâğıt düzeni otomatik hesaplanır.">ⓘ</span></span><select id="week-count" aria-label="Hafta sayısı" title="Seçilen hafta sayısına göre A4 yatay sayfalama yapılır"><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16" selected>16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option></select></label>
+                <label><span class="field-label">Haftalık Atılacak İmza Sayısı <span class="info-tip" title="Her hafta için 1–5 imza sütunu oluşturulur; gerekirse haftalar yeni sayfalara bölünür.">ⓘ</span></span><select id="signature-select" aria-label="Haftalık atılacak imza sayısı"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></label>
               </div>
+              <div class="field-grid exam-settings">
+                <label><span class="field-label">Vize Haftası <span class="info-tip" title="Vize haftasında imza yerine sınav sütunu açılır.">ⓘ</span></span><select id="midterm-week" aria-label="Vize haftası"></select></label>
+                <label><span class="field-label">Final Haftası <span class="info-tip" title="Final haftasında imza yerine sınav sütunu açılır.">ⓘ</span></span><select id="final-week" aria-label="Final haftası"></select></label>
+              </div>
+              <p id="layout-preview" class="layout-preview" aria-live="polite">A4 yerleşimi hesaplanıyor...</p>
             </section>
           </div>
         </div>
@@ -116,14 +121,14 @@
   </div>
 
   <div id="help-panel" class="help-modal" hidden role="dialog" aria-modal="true" aria-labelledby="help-title">
-    <div class="help-dialog"><button type="button" id="help-close" class="help-close" aria-label="Yardımı kapat">×</button><h2 id="help-title">Yoklama Oluşturucu · Yardım</h2><ol><li>OBS'den indirdiğiniz sınıf listelerini .xlsx olarak yükleyin.</li><li>Eğitim yılı, dönem, ders kodu, ders adı ve öğretim üyesini girin.</li><li>Haftalık imza sayısını seçin (1, 2 veya 3).</li><li>Yoklamaları oluşturup Excel, PDF veya ZIP dosyalarını indirin.</li></ol><p>Listeler yalnızca tarayıcınızda işlenir. Şablonlar 16 haftalık dönem için hazırlanmıştır.</p></div>
+    <div class="help-dialog"><button type="button" id="help-close" class="help-close" aria-label="Yardımı kapat">×</button><h2 id="help-title">Yoklama Oluşturucu · Yardım</h2><ol><li>OBS'den indirdiğiniz sınıf listelerini .xlsx olarak yükleyin.</li><li>Eğitim yılı, dönem, ders kodu, ders adı ve öğretim üyesini girin.</li><li>Hafta sayısını (10–20), haftalık imza sayısını (1–5), vize ve final haftalarını seçin.</li><li>Yoklamaları oluşturup Excel, PDF veya ZIP dosyalarını indirin.</li></ol><p>Listeler yalnızca tarayıcınızda işlenir. Haftalar ve imza alanları A4 kâğıda otomatik sığdırılır; sayfa bölünmeleri kendiliğinden hesaplanır.</p></div>
   </div>
   <div id="print-stage" aria-hidden="true"></div>
   <script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
-  <script defer src="./assets/helpers.js?v=4"></script>
-  <script defer src="./assets/app.js?v=4"></script>
+  <script defer src="./assets/helpers.js?v=5"></script>
+  <script defer src="./assets/app.js?v=5"></script>
 </body>
 </html>
