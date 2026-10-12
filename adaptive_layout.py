@@ -148,20 +148,29 @@ def page_plan(weeks, signatures, midterm, final, min_mark_mm=MARK_MIN_MM, fixed_
     if available <= 0:
         raise ValueError('Sütunlara ayrılan alan A4 genişliğini aşıyor')
     all_groups = groups_for_weeks(weeks, signatures, midterm, final)
-    pages, current, used = [], [], 0
-    for group in all_groups:
-        required = group.span * min_mark_mm
-        if required > available + 1e-9:
-            raise ValueError('İmza sayısı ve asgari genişlik mevcut A4 sayfasına sığmıyor')
-        if current and (used + group.span) * min_mark_mm > available + 1e-9:
-            pages.append(current)
-            current, used = [], 0
-        current.append(group)
-        used += group.span
-    if current:
-        pages.append(current)
-    return pages
-
+    # Dynamic programming: minimize A4 sections first, then balance their
+    # signature-column counts. A greedy fill strands tiny, unreadable last pages.
+    n = len(all_groups)
+    dp = [None] * (n + 1)
+    dp[n] = (0, 0, [])
+    for start in range(n - 1, -1, -1):
+        used = 0
+        best = None
+        for end in range(start + 1, n + 1):
+            used += all_groups[end - 1].span
+            if used * min_mark_mm > available + 1e-9:
+                break
+            remaining = dp[end]
+            if remaining is None:
+                continue
+            candidate = (remaining[0] + 1, remaining[1] + used ** 2,
+                         [all_groups[start:end]] + remaining[2])
+            if best is None or candidate[:2] < best[:2]:
+                best = candidate
+        dp[start] = best
+    if dp[0] is None:
+        raise ValueError('Geçerli bir A4 sayfa planı oluşturulamadı')
+    return dp[0][2]
 
 def mm_to_excel_chars(mm):
     """Calibri/Aptos Narrow column conversion at nominal 96 dpi (7px/char)."""
