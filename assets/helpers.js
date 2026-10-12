@@ -51,11 +51,23 @@
       group.push({week,span}); used += span;
     }
     if (group.length) pages.push(group);
-    return pages.map(g=>({
-      start:g[0].week,end:g[g.length-1].week,
-      columns:g.reduce((n,entry)=>n+entry.span,0),
-      minWidthMm:Math.min(Math.max(18,minWidthMm),capacity/g.reduce((n,entry)=>n+entry.span,0))
-    }));
+    return pages.map(g=>{
+      const columns = g.reduce((n,entry)=>n+entry.span,0);
+      const markWidthMm = Math.round(Math.min(Math.max(18,minWidthMm),capacity/columns)*10000)/10000;
+      return {
+        start:g[0].week,end:g[g.length-1].week,
+        columns,
+        minWidthMm:markWidthMm, markWidthMm,
+        fixedWidthsMm:[7.5,21,nameMaxWidthMm],
+        totalWidthMm:7.5+21+nameMaxWidthMm+columns*markWidthMm,
+        groups:g.map(entry=>({
+          week:entry.week,span:entry.span,
+          kind:entry.week===midterm || entry.week===final?'exam':'week',
+          label:entry.week===midterm?`VİZE SINAVI · ${entry.week}. HAFTA`
+                :entry.week===final?`FİNAL SINAVI · ${entry.week}. HAFTA`:`${entry.week}. HAFTA`
+        }))
+      };
+    });
   }
   const api = Object.freeze({academicDefaults, archiveFilename, paperLayout});
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

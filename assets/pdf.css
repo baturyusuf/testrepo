@@ -38,3 +38,16 @@
 .print-page .exam-header{font-size:var(--mark-header-font-px,8px)}
 .print-page td.name{font-size:var(--name-font-px,10.67px)}
 .print-page td.num,.print-page td.rank{font-size:var(--num-font-px,9.33px)}
+
+/* A4 render fidelity: original Excel row heights and margins expressed as CSS pixels at 96dpi.
+ * Both PDF generation and on-screen preview render this exact .print-page element. */
+.print-page{padding:18.8976px 15.1181px 18.8976px;width:1122.5197px;height:793.7008px}
+.print-page .print-head,.print-page .print-meta,.print-page .print-department,
+.print-page table{width:var(--paper-content-width,100%);margin-left:auto;margin-right:auto}
+.print-page .print-head{height:36px}
+.print-page .meta-cell strong{height:24px;padding:3px 6px;display:flex;justify-content:center;align-items:center}
+.print-page .meta-cell span{height:32px;padding:5px 8px}
+.print-page .print-department{height:29.3333px;min-height:29.3333px;padding:4px 5px}
+.print-page .week-top th{height:30.6667px}
+.print-page .week-sub th{height:22.6667px}
+.print-page .student-row{max-height:none}

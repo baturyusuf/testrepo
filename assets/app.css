@@ -38,3 +38,34 @@
 .layout-controls label{min-width:0}
 .layout-caption{font-size:11px;line-height:1.55;color:#7d7584;margin:10px 0 0}
 @media(max-width:580px){.layout-controls{grid-template-columns:1fr}}
+
+/* Native-scale A4 preview: a scaled display of the actual PDF renderer. */
+.a4-preview-card{margin-top:13px;padding:17px 18px 15px}
+.a4-preview-heading{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.a4-preview-heading h2{font-size:17px;margin:0}
+.a4-preview-tag{margin-left:auto;border:1px solid #efd5db;color:#9b1830;background:#fff3f5;border-radius:15px;padding:5px 10px;font-size:11px;font-weight:700;white-space:nowrap}
+.a4-preview-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:12px}
+.a4-preview-toolbar p{font-size:12px;line-height:1.5;color:#637085;margin:0;max-width:550px}
+.a4-preview-controls{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.a4-preview-controls button,.a4-preview-controls select{border:1px solid #e8d3d7;border-radius:7px;background:#fff;padding:8px 11px;color:#7b1c2d;font-size:12px;font-weight:700;min-height:36px}
+.a4-preview-controls button:hover:not(:disabled){background:#fff2f4;border-color:#be5867}
+.a4-preview-controls button:disabled{opacity:.4;cursor:not-allowed}
+.a4-preview-controls select{max-width:205px;min-width:145px}
+.a4-preview-controls .a4-preview-zoom{background:#8d0e22;color:#fff;white-space:nowrap}
+.a4-preview-controls .a4-preview-zoom:hover{background:#ad1c36!important;color:white}
+.a4-preview-viewport{background:#f0f2f6;border:1px solid #e2e3e8;border-radius:9px;padding:12px;overflow:auto;max-height:660px;min-height:170px;scrollbar-width:thin}
+.a4-preview-viewport:focus-visible{outline:2px solid #a01329;outline-offset:2px}
+.a4-preview-canvas{position:relative;margin:0 auto;flex:none}
+.a4-preview-canvas>.print-page{position:absolute;left:0;top:0;margin:0;transform-origin:top left;box-shadow:0 6px 26px #131c3330}
+.a4-preview-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;padding:10px 2px 3px;font-size:11px;font-weight:700;color:#793042}
+.a4-preview-footer #preview-scale{color:#647084;font-weight:600}
+.a4-preview-disclaimer{font-size:10px;line-height:1.5;color:#7f8796;margin:6px 2px 0}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:1020px){.a4-preview-toolbar{flex-wrap:wrap}.a4-preview-toolbar p{max-width:100%}}
+@media(max-width:580px){.a4-preview-card{padding:12px}.a4-preview-heading h2{font-size:15px}.a4-preview-tag{margin-left:0}.a4-preview-toolbar{flex-direction:column;align-items:stretch}.a4-preview-controls{justify-content:space-between;flex-wrap:wrap}.a4-preview-controls select{min-width:115px;flex:1}.a4-preview-controls .a4-preview-zoom{margin-left:auto}.a4-preview-viewport{padding:8px;max-height:480px}}
+
+/* Fitted mode always shows the entire A4 page. Native 100% uses a scrollable viewport. */
+.a4-preview-viewport{max-height:none}
+.a4-preview-viewport.is-actual-size{max-height:660px}
+.a4-preview-card{max-width:1130px;margin-left:auto;margin-right:auto}
+@media(max-width:580px){.a4-preview-viewport.is-actual-size{max-height:480px}}

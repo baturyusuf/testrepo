@@ -86,3 +86,11 @@ Geliştiren: **Arş. Gör. Hüseyin Eren Demirtaş**.
 Tarayıcıdaki A4 planı hesaplaması, henüz OBS listesi okunmadığı için ad sütununu seçilen **azami** genişlikte varsayar. Excel üretildiğinde gerçek en uzun öğrenci adına göre hesaplanıp aynı fiziksel ölçüler PDF manifestine aktarılır; bu nedenle üretilen yatay bölüm sayısı önizlemeden daha az olabilir.
 
 Excel ve PDF için yazı punto bilgisi aynı ayardan beslenir. Chrome üzerinde Aptos bulunmuyorsa PDF önizlemesinde tarayıcının yedek fontu kullanılabilir; Excel dosyası seçilen aileyi font meta verisi olarak taşır.
+
+## Canlı A4 önizlemesi
+
+- Dosya seçmeden çalışır. Tarayıcıda 17 sentetik öğrenci satırı (`9999999 / Öğrenci 1` … `Öğrenci 17`) ile ilk dikey A4 sayfasını gösterir.
+- Yıl, dönem, ders kodu, ders adı, öğretim elemanı, hafta, imza sayısı, sınav haftaları, en küçük imza genişliği, font ailesi ve punto ayarlarını anlık dinler.
+- Bölüm değiştirici ile tüm yatay çalışma sayfaları gezilebilir. **%100 göster** ile örnek 96 DPI CSS ölçüsünde detaylı inceleme, **Ekrana sığdır** ile ekrana uygun ölçekleme yapılır.
+- Önizleme ile gerçek PDF aynı `YoklamaPrintPage` renderer fonksiyonunu kullanır. Sütun genişlikleri, A4 yan kenar boşlukları ve font boyları Excel üretimindeki mm/pt ölçülerinden hesaplanır.
+- Gerçek Excel çıktısının adı-soyadı sütunu listedeki en uzun gerçek isme göre daralabileceğinden, dosyasız örnek önizlemesi seçili **azami** Ad Soyad genişliğini varsayar. Yazıcı sürücüsü ve Excel font ölçümü küçük sapmalar yaratabilir. Bu sebeple fiziksel baskının birebir piksel eşitliği garanti edilmez.

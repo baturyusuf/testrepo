@@ -229,7 +229,10 @@
     el.style.setProperty('--mark-header-font-px', `${(Math.max(6,fontPt-2)*96/72).toFixed(2)}px`);
     el.style.setProperty('--heading-font-px', `${(Math.max(8,fontPt+3)*96/72).toFixed(2)}px`);
     el.style.setProperty('--meta-font-px', `${(fontPt*96/72).toFixed(2)}px`);
-    const colDefs = colWidths.map(mm=>`<col style="width:${(mm / sheetWidthMm * 100).toFixed(4)}%">`).join('');
+    const pxPerMm = 96 / 25.4;
+    const tableWidthPx = sheetWidthMm * pxPerMm;
+    el.style.setProperty('--paper-content-width', `${tableWidthPx.toFixed(3)}px`);
+    const colDefs = colWidths.map(mm=>`<col style="width:${(mm * pxPerMm).toFixed(3)}px">`).join('');
     const firstLine = groups.map(group => group.kind === 'week'
       ? `<th class="week-header" colspan="${group.span}">${html(group.label)}</th>`
       : `<th class="exam-header" colspan="${group.span}" rowspan="2">${html(group.label)}</th>`).join('');
@@ -237,9 +240,11 @@
       ? Array.from({length: group.span}, (_, i) => `<th>${i + 1}. İMZA</th>`).join('') : '').join('');
     const body = rows.map(row => `<tr class="student-row" style="height:${((sheet.rowHeightPt || 23.5) * 96/72).toFixed(2)}px"><td class="rank">${html(row.rank)}</td><td class="num">${html(row.number)}</td><td class="name" style="font-size:${((Number(row.nameFontPt || sheet.fontSizePt || 8))*96/72).toFixed(2)}px">${html(row.name)}</td>${groups.map(group => Array.from({length:group.span}, () => `<td class="${group.kind === 'exam' ? 'exam-cell' : ''}"></td>`).join('')).join('')}</tr>`).join('');
 
-    el.innerHTML = `<div class="print-head">${html(sheet.title)}</div><div class="print-meta"><div class="meta-cell"><strong>Ders Kodu ve İsmi</strong><span>${html(sheet.course)}</span></div><div class="meta-cell"><strong>Dersin Öğretim Elemanı ve İmzası</strong><span>${html(sheet.instructor)}</span></div></div><div class="print-department">${html(sheet.department)}</div><table style="width:${(sheetWidthMm / printableMm * 100).toFixed(3)}%"><colgroup>${colDefs}</colgroup><thead><tr class="week-top"><th rowspan="2">SIRA</th><th rowspan="2">NUMARA</th><th rowspan="2">AD SOYAD</th>${firstLine}</tr><tr class="week-sub">${secondLine}</tr></thead><tbody>${body}</tbody></table><span class="page-mark">${html(sheet.name)} · ${pageNum} / ${pageTotal}</span>`;
+    el.innerHTML = `<div class="print-head">${html(sheet.title)}</div><div class="print-meta"><div class="meta-cell"><strong>Ders Kodu ve İsmi</strong><span>${html(sheet.course)}</span></div><div class="meta-cell"><strong>Dersin Öğretim Elemanı ve İmzası</strong><span>${html(sheet.instructor)}</span></div></div><div class="print-department">${html(sheet.department)}</div><table style="width:${tableWidthPx.toFixed(3)}px"><colgroup>${colDefs}</colgroup><thead><tr class="week-top"><th rowspan="2">SIRA</th><th rowspan="2">NUMARA</th><th rowspan="2">AD SOYAD</th>${firstLine}</tr><tr class="week-sub">${secondLine}</tr></thead><tbody>${body}</tbody></table><span class="page-mark">${html(sheet.name)} · ${pageNum} / ${pageTotal}</span>`;
     return el;
   }
+  // The lightweight preview calls this same renderer; it never loads OBS files or Pyodide.
+  window.YoklamaPrintPage = makePrintPage;
 
   async function createPDF(sheet, signatures) {
     const { jsPDF } = window.jspdf;

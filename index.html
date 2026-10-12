@@ -8,8 +8,8 @@
   <title>Yoklama Oluşturucu | İstanbul Rumeli Üniversitesi</title>
   <link rel="icon" type="image/png" href="./assets/rumeli-logo.png?v=4" />
   <link rel="apple-touch-icon" href="./assets/rumeli-logo.png?v=4" />
-  <link rel="stylesheet" href="./assets/app.css?v=6" />
-  <link rel="stylesheet" href="./assets/pdf.css?v=6" />
+  <link rel="stylesheet" href="./assets/app.css?v=7" />
+  <link rel="stylesheet" href="./assets/pdf.css?v=7" />
 </head>
 <body>
   <div class="app-shell">
@@ -107,6 +107,32 @@
           </div>
         </div>
 
+        <section class="workspace-card a4-preview-card" aria-labelledby="a4-preview-title">
+          <header class="card-heading a4-preview-heading">
+            <span class="number-badge">4</span>
+            <h2 id="a4-preview-title">Canlı A4 Baskı Önizlemesi</h2>
+            <span class="a4-preview-tag">A4 yatay · 297 × 210 mm</span>
+          </header>
+          <div class="a4-preview-toolbar">
+            <p>Excel listesi yüklemeden sayfa ve imza ölçülerini inceleyin. Değişiklikler anında uygulanır.</p>
+            <div class="a4-preview-controls" aria-label="Önizleme sayfası seçimi">
+              <button id="preview-prev" type="button" aria-label="Önceki yatay bölüm" title="Önceki yatay bölüm">‹</button>
+              <label for="preview-section" class="sr-only">Önizlenen yatay bölüm</label>
+              <select id="preview-section" aria-label="Önizlenen yatay bölüm"></select>
+              <button id="preview-next" type="button" aria-label="Sonraki yatay bölüm" title="Sonraki yatay bölüm">›</button>
+              <button id="preview-zoom" type="button" class="a4-preview-zoom" aria-pressed="false">%100 göster</button>
+            </div>
+          </div>
+          <div id="preview-viewport" class="a4-preview-viewport" role="region" tabindex="0" aria-label="A4 yatay örnek yoklama kâğıdı">
+            <div id="preview-canvas" class="a4-preview-canvas"></div>
+          </div>
+          <div class="a4-preview-footer">
+            <span id="preview-measurements" aria-live="polite">Ölçüler hesaplanıyor…</span>
+            <span id="preview-scale" aria-live="polite"></span>
+          </div>
+          <p class="a4-preview-disclaimer">Örnek öğrenci numaraları ve adları kullanılır. Ad Soyad sütunu güvenli olması için seçtiğiniz azami genişlikte gösterilir; gerçek listede daha dar olabilir. Milimetre oranları Excel sayfa hesabından gelir. Excel/yazıcı font ve baskı motoru küçük farklılıklar oluşturabilir.</p>
+        </section>
+
         <button id="generate" class="generate-button" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l4 4v16H6zM14 2v5h5M9 11h7M9 15h7M9 19h5"/></svg><span>Yoklama Dokümanlarını Oluştur</span><span class="generate-arrow">→</span></button>
 
         <section id="status" class="status" role="status" aria-live="polite" hidden><span class="spinner" id="status-spinner" aria-hidden="true"></span><div><strong id="status-title">Hazırlanıyor</strong><p id="status-detail"></p></div></section>
@@ -131,14 +157,15 @@
   </div>
 
   <div id="help-panel" class="help-modal" hidden role="dialog" aria-modal="true" aria-labelledby="help-title">
-    <div class="help-dialog"><button type="button" id="help-close" class="help-close" aria-label="Yardımı kapat">×</button><h2 id="help-title">Yoklama Oluşturucu · Yardım</h2><ol><li>OBS'den indirdiğiniz sınıf listelerini .xlsx olarak yükleyin.</li><li>Eğitim yılı, dönem, ders kodu, ders adı ve öğretim üyesini girin.</li><li>Hafta sayısını (10–20), haftalık imza sayısını (1–5), vize ve final haftalarını seçin.</li><li>Yoklamaları oluşturup Excel, PDF veya ZIP dosyalarını indirin.</li></ol><p>Listeler yalnızca tarayıcınızda işlenir. Asgari imza genişliği, yazı tipi/puntosu ve ad soyad azami genişliğini seçebilirsiniz. Sayfalar A4 kâğıda otomatik sığdırılır.</p></div>
+    <div class="help-dialog"><button type="button" id="help-close" class="help-close" aria-label="Yardımı kapat">×</button><h2 id="help-title">Yoklama Oluşturucu · Yardım</h2><ol><li>OBS'den indirdiğiniz sınıf listelerini .xlsx olarak yükleyin.</li><li>Eğitim yılı, dönem, ders kodu, ders adı ve öğretim üyesini girin.</li><li>Hafta sayısını (10–20), haftalık imza sayısını (1–5), vize ve final haftalarını seçin.</li><li>Yoklamaları oluşturup Excel, PDF veya ZIP dosyalarını indirin.</li></ol><p>Listeler yalnızca tarayıcınızda işlenir. Asgari imza genişliği, yazı tipi/puntosu ve ad soyad azami genişliğini seçebilirsiniz. A4 baskı önizlemesi dosya yüklemeden çalışır; bölümler arasında gezebilir ve %100 ölçekte inceleyebilirsiniz. Sayfalar A4 kâğıda otomatik sığdırılır.</p></div>
   </div>
   <div id="print-stage" aria-hidden="true"></div>
   <script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
-  <script defer src="./assets/helpers.js?v=6"></script>
-  <script defer src="./assets/app.js?v=6"></script>
+  <script defer src="./assets/helpers.js?v=7"></script>
+  <script defer src="./assets/app.js?v=7"></script>
+  <script defer src="./assets/preview.js?v=7"></script>
 </body>
 </html>
