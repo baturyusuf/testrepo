@@ -76,6 +76,15 @@ def generate(payload):
     original_wb.close()
     if not course or not instructor:
         raise ValueError('Ders kodu/adı ve öğretim elemanı gereklidir')
+    academic_year = str(settings.get('academicYear', '')).strip()
+    semester = str(settings.get('semester', '')).strip()
+    match = re.fullmatch(r'(20\d{2})-(20\d{2})', academic_year)
+    if not match or int(match.group(2)) != int(match.group(1)) + 1:
+        raise ValueError('Eğitim öğretim yılı YYYY-YYYY biçiminde olmalıdır')
+    if semester not in ('Güz', 'Bahar'):
+        raise ValueError('Dönem Güz veya Bahar olmalıdır')
+    title = (f'İSTANBUL RUMELİ ÜNİVERSİTESİ {academic_year} EĞİTİM ÖĞRETİM YILI '
+             f'{core.tr_buyuk(semester)} DÖNEMİ DERS YOKLAMA LİSTESİ')
     output = WORK / 'output'
     if output.exists():
         shutil.rmtree(output)
@@ -90,7 +99,15 @@ def generate(payload):
             if not source.is_file():
                 raise core.YoklamaHatasi('Yüklenen dosya bulunamadı')
             target, count, blanks, department, pages, warnings = core.yoklama_olustur(source, template, course, instructor)
-            workbook = load_workbook(target, read_only=False, data_only=True)
+            workbook = load_workbook(target, read_only=False)
+            for sheet in workbook.worksheets:
+                sheet['A1'] = title
+                # Preserve heading styling while keeping the period title printable.
+                from copy import copy
+                heading_font = copy(sheet['A1'].font)
+                heading_font.sz = min(heading_font.sz or 28, 24)
+                sheet['A1'].font = heading_font
+            workbook.save(target)
             sheet_data = [_sheet_data(sheet, imza, capacity) for sheet in workbook.worksheets]
             workbook.close()
             manifest['results'].append({
