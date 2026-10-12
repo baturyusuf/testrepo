@@ -6,9 +6,10 @@ OBS şube öğrenci listelerinden **Excel ve A4 yatay PDF** yoklama listeleri ü
 
 1. Web sitesini açın; OBS üzerinden indirdiğiniz `.xlsx` öğrenci listelerini sürükleyip bırakın.
 2. Haftalık imza sayısını **1, 2 veya 3** seçin.
-3. Ders kodu ve adı ile öğretim elemanını girin.
-4. **Yoklamaları oluştur** düğmesini seçin.
-5. Çıktıları ayrı ayrı Excel/PDF veya tek ZIP olarak indirin.
+3. Eğitim öğretim yılını ve **Güz/Bahar** dönemini kontrol edin; tarayıcının yerel tarihine göre otomatik seçilir (Eylül–Ocak Güz, Şubat–Ağustos Bahar), elle değiştirilebilir.
+4. Ders kodu ve adı ile öğretim elemanını girin.
+5. **Yoklamaları oluştur** düğmesini seçin.
+6. Çıktıları ayrı ayrı Excel/PDF veya tek ZIP olarak indirin (ör. `BLG103 - Programlama I Yoklamaları.zip`).
 
 Dosyalar tarayıcının içindeki sanal dosya sisteminde işlenir. Öğrenci kayıtları GitHub'a veya uygulamanın bir sunucusuna yüklenmez.
 
@@ -70,3 +71,18 @@ python -m http.server 8000
 ## Lisans
 
 Bu proje kuruma özel yoklama oluşturma aracının web uyarlamasıdır. Dağıtım ve şablon kullanımı için kurum politikalarını uygulayın.
+## Akademik dönem ve dosya adları
+
+- Eğitim yılı Eylül ayında değişir; Ocak **Güz**, Şubat–Ağustos **Bahar** varsayılanıdır. Tarih kullanıcı cihazından alınır, seçim elle değiştirilebilir.
+- Seçilen eğitim yılı ve dönem, Excel/PDF başlıklarına aktarılır.
+- Sol menüde seçilen eğitim yılı ve geliştirici bilgisi (Arş. Gör. Hüseyin Eren Demirtaş) görüntülenir.
+- İndirilen ZIP adı işlem sırasında girilmiş ders kodundan/adından oluşturulur (örn. `BLG103 - Programlama I Yoklamaları.zip`). ZIP içindeki Excel/PDF yapısı değişmez.
+
+## Testler
+
+```sh
+node tests/test_helpers.cjs
+python tests/test_web_bridge.py
+```
+
+Python testi için `openpyxl` yüklü olmalıdır.
