@@ -331,7 +331,11 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
         for g in groups:
             start=mark_col
             end=mark_col+g.span-1
-            if g.span > 1:
+            if g.kind == 'week' and g.span == 1:
+                # Exactly one weekly signature: merge the week heading vertically
+                # across the two header rows; do not create a "1. İMZA" label.
+                ws.merge_cells(start_row=5,start_column=start,end_row=6,end_column=start)
+            elif g.span > 1:
                 ws.merge_cells(start_row=5,start_column=start,end_row=5,end_column=end)
             c=ws.cell(5,start,g.label)
             c.font=Font(name=font_family,size=font_pt(8 if g.span>1 else 7),bold=True,color=WHITE if g.kind=='week' else TEXT)
@@ -339,6 +343,8 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
             c.alignment=Alignment(horizontal='center',vertical='center',wrap_text=True,shrink_to_fit=True)
             c.border=Border(left=hairline,right=hairline,bottom=hairline)
             for mark_i in range(g.span):
+                if g.kind == 'week' and g.span == 1:
+                    continue
                 x=ws.cell(6,start+mark_i)
                 x.value=f'{mark_i+1}. İMZA' if g.kind=='week' else 'SINAV'
                 x.font=Font(name=font_family,size=font_pt(7),bold=True,color=TEXT)

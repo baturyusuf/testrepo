@@ -94,6 +94,23 @@ def test_workbook_and_bridge():
                 assert [g['week'] for g in all_groups]==list(range(1,weeks+1))
                 assert sum(g['kind']=='exam' for g in all_groups)==2
                 for ws,sh in zip(wb.worksheets,output['sheets']):
+                    # Verify the saved Excel workbook, not only in-memory objects.
+                    column = 4
+                    for group in sh['groups']:
+                        if group['kind'] == 'week' and signatures == 1:
+                            assert ws.cell(5, column).value == f"{group['week']}. HAFTA"
+                            assert ws.cell(6, column).value is None
+                            assert any(
+                                area.min_row == 5 and area.max_row == 6
+                                and area.min_col == column and area.max_col == column
+                                for area in ws.merged_cells.ranges
+                            ), (ws.title, group)
+                        elif group['kind'] == 'week':
+                            assert ws.cell(5, column).value == f"{group['week']}. HAFTA"
+                            assert [ws.cell(6, column+i).value for i in range(signatures)] == [
+                                f"{i+1}. İMZA" for i in range(signatures)
+                            ]
+                        column += group['span']
                     assert ws.page_setup.orientation=='landscape'
                     assert ws.page_setup.fitToWidth==1
                     assert ws.print_title_rows=='$1:$6'

@@ -89,3 +89,6 @@
   width:62%;height:28px;padding:2px 4px;min-width:0;
   font-size:var(--header-font-px,9.33px)
 }
+
+/* Single weekly signature: the week header replaces the numbered subheader. */
+.print-page .week-top.single-signature th{height:53.3334px;vertical-align:middle}

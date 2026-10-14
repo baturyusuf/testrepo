@@ -255,14 +255,29 @@
     const tableWidthPx = sheetWidthMm * pxPerMm;
     el.style.setProperty('--paper-content-width', `${tableWidthPx.toFixed(3)}px`);
     const colDefs = colWidths.map(mm=>`<col style="width:${(mm * pxPerMm).toFixed(3)}px">`).join('');
-    const firstLine = groups.map(group => group.kind === 'week'
-      ? `<th class="week-header" colspan="${group.span}">${html(group.label)}</th>`
-      : `<th class="exam-header" colspan="${group.span}" rowspan="2">${html(group.label)}</th>`).join('');
-    const secondLine = groups.map(group => group.kind === 'week'
-      ? Array.from({length: group.span}, (_, i) => `<th>${i + 1}. İMZA</th>`).join('') : '').join('');
+    const hasNumberedSignatureHeaders = groups.some(group =>
+      group.kind === 'week' && group.span > 1);
+    const firstLine = groups.map(group => {
+      if (group.kind === 'week') {
+        // With one weekly signature, the week title IS the entire header:
+        // no numbered signature subheader and no split header cell.
+        const attributes = hasNumberedSignatureHeaders
+          ? (group.span === 1 ? 'rowspan="2"' : `colspan="${group.span}"`)
+          : '';
+        return `<th class="week-header" ${attributes}>${html(group.label)}</th>`;
+      }
+      return `<th class="exam-header" colspan="${group.span}"${hasNumberedSignatureHeaders ? ' rowspan="2"' : ''}>${html(group.label)}</th>`;
+    }).join('');
+    const secondLine = hasNumberedSignatureHeaders
+      ? groups.map(group => group.kind === 'week' && group.span > 1
+        ? Array.from({length: group.span}, (_, i) => `<th>${i + 1}. İMZA</th>`).join('')
+        : '').join('')
+      : '';
+    const studentHeaderSpan = hasNumberedSignatureHeaders ? ' rowspan="2"' : '';
+    const tableHead = `<tr class="week-top${hasNumberedSignatureHeaders ? '' : ' single-signature'}"><th${studentHeaderSpan}>SIRA</th><th${studentHeaderSpan}>NUMARA</th><th${studentHeaderSpan}>AD SOYAD</th>${firstLine}</tr>${hasNumberedSignatureHeaders ? `<tr class="week-sub">${secondLine}</tr>` : ''}`;
     const body = rows.map(row => `<tr class="student-row" style="height:${((sheet.rowHeightPt || 23.5) * 96/72).toFixed(2)}px"><td class="rank">${html(row.rank)}</td><td class="num">${html(row.number)}</td><td class="name" style="font-size:${((Number(row.nameFontPt || sheet.fontSizePt || 8))*96/72).toFixed(2)}px">${html(row.name)}</td>${groups.map(group => Array.from({length:group.span}, () => `<td class="${group.kind === 'exam' ? 'exam-cell' : ''}"></td>`).join('')).join('')}</tr>`).join('');
 
-    el.innerHTML = `<div class="print-head">${html(sheet.title)}</div><div class="print-meta${compactMeta ? ' compact' : ''}"><div class="meta-cell"><strong>Ders Kodu ve İsmi</strong><span>${html(sheet.course)}</span></div><div class="meta-cell"><strong>Dersin Öğretim Elemanı ve İmzası</strong><span>${html(sheet.instructor)}</span></div></div><div class="print-department">${html(sheet.department)}</div><table style="width:${tableWidthPx.toFixed(3)}px"><colgroup>${colDefs}</colgroup><thead><tr class="week-top"><th rowspan="2">SIRA</th><th rowspan="2">NUMARA</th><th rowspan="2">AD SOYAD</th>${firstLine}</tr><tr class="week-sub">${secondLine}</tr></thead><tbody>${body}</tbody></table><span class="page-mark">${html(sheet.name)} · ${pageNum} / ${pageTotal}</span>`;
+    el.innerHTML = `<div class="print-head">${html(sheet.title)}</div><div class="print-meta${compactMeta ? ' compact' : ''}"><div class="meta-cell"><strong>Ders Kodu ve İsmi</strong><span>${html(sheet.course)}</span></div><div class="meta-cell"><strong>Dersin Öğretim Elemanı ve İmzası</strong><span>${html(sheet.instructor)}</span></div></div><div class="print-department">${html(sheet.department)}</div><table style="width:${tableWidthPx.toFixed(3)}px"><colgroup>${colDefs}</colgroup><thead>${tableHead}</thead><tbody>${body}</tbody></table><span class="page-mark">${html(sheet.name)} · ${pageNum} / ${pageTotal}</span>`;
     return el;
   }
   // The lightweight preview calls this same renderer; it never loads OBS files or Pyodide.

@@ -106,3 +106,7 @@ Excel ve PDF için yazı punto bilgisi aynı ayardan beslenir. Chrome üzerinde 
 ## Canlı kaydırıcı ayarları (v10)
 
 "Yazdırma ve Sütun Ayarları" alanındaki **Asgari İmza Genişliği** (8–20 mm, 15 mm varsayılan), **Yazı Büyüklüğü** (6–14 pt, 8 pt varsayılan) ve **Ad Soyad Azami Genişliği** (30–80 mm, 58 mm varsayılan; ikişer mm adımlarla) artık erişilebilir HTML range kaydırıcılarıdır. Güncel değer, kaydırıcının yanında görüntülenir. Her `input` olayında ölçü önizlemesi ve üretim geçerliliği yenilenir; canlı A4 çizimi animasyon karesine göre güncellenir. Yazı tipi listesi kategorik bir tercih olduğu için açılır listede kalır.
+
+## Tek imzalı hafta başlıkları (v11)
+
+Haftalık imza sayısı **1** seçildiğinde Excel'de hafta başlığı 5. ve 6. satır boyunca birleştirilir; ikinci satıra `1. İMZA` yazılmaz. PDF ve canlı A4 önizlemesi aynı başlığı tek ve iki satır yüksekliğinde gösterir. Haftalık imza sayısı **2–5** ise numaralı imza alt başlıkları korunur.
