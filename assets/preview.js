@@ -148,8 +148,23 @@
     }
   });
   for (const id of ['week-count','signature-select','midterm-week','final-week',
-      'mark-width','font-size','font-family','name-max-width','academic-year','semester']) {
-    $( `#${id}` ).addEventListener('change', () => {selectedSection=0;render();});
+      'font-family','academic-year','semester']) {
+    $(`#${id}`).addEventListener('change', () => {selectedSection=0;render();});
+  }
+  // Native range input fires continuously while the thumb is dragged.
+  // Coalesce updates to one PDF-equivalent render per animation frame.
+  let pendingSliderFrame = false;
+  function scheduleSliderPreview() {
+    if (pendingSliderFrame) return;
+    pendingSliderFrame = true;
+    requestAnimationFrame(() => {
+      pendingSliderFrame = false;
+      selectedSection = 0;
+      render();
+    });
+  }
+  for (const id of ['mark-width','font-size','name-max-width']) {
+    $(`#${id}`).addEventListener('input', scheduleSliderPreview);
   }
   for (const id of ['course-code','course-name','instructor']) {
     $( `#${id}` ).addEventListener('input',render);

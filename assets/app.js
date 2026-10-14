@@ -47,12 +47,21 @@
   const html = (value) => String(value ?? '').replace(/[&<>"']/g, ch => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch]));
   const safeName = (value) => String(value).replace(/\\/g, '/').split('/').pop().replace(/[^\p{L}\p{N}_\.\- ]/gu, '_').replace(/^[. ]+|[. ]+$/g, '').slice(0,110) || 'obs.xlsx';
   const tick = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  for (let width = 8; width <= 20; width++) markWidthUI.add(new Option(`${width} mm`, String(width)));
-  for (let pt = 6; pt <= 14; pt++) fontSizeUI.add(new Option(`${pt} pt`, String(pt)));
-  for (let mm = 30; mm <= 80; mm += 2) nameMaxUI.add(new Option(`${mm} mm`, String(mm)));
-  markWidthUI.value = '15';
-  fontSizeUI.value = '8';
-  nameMaxUI.value = '58';
+  // Sliders are initialized from their HTML defaults and show their exact
+  // currently-selected value, including during keyboard adjustments.
+  const sliderSettings = [
+    [markWidthUI, 'mm'],
+    [fontSizeUI, 'pt'],
+    [nameMaxUI, 'mm']
+  ];
+  function syncSlider(slider, unit) {
+    const value = Number(slider.value);
+    const min = Number(slider.min), max = Number(slider.max);
+    slider.style.setProperty('--slider-fill', `${((value-min)/(max-min)*100).toFixed(2)}%`);
+    const output = document.getElementById(`${slider.id}-value`);
+    if (output) output.value = `${value} ${unit}`;
+  }
+  for (const [slider, unit] of sliderSettings) syncSlider(slider, unit);
   const minMarkWidth = () => Number(markWidthUI.value);
   const fontSizePt = () => Number(fontSizeUI.value);
   const nameMaxWidth = () => Number(nameMaxUI.value);
@@ -142,9 +151,16 @@
     renderFiles();
   }));
   instructorUI.addEventListener('input', () => { invalidateResults(); renderFiles(); });
-  [yearUI, semesterUI, $('#signature-select'), midtermUI, finalUI, markWidthUI, fontSizeUI, fontFamilyUI, nameMaxUI].forEach(el => el.addEventListener('change', () => {
+  [yearUI, semesterUI, $('#signature-select'), midtermUI, finalUI, fontFamilyUI].forEach(el => el.addEventListener('change', () => {
     invalidateResults(); updatePlanPreview(); renderFiles();
   }));
+  for (const [slider, unit] of sliderSettings) {
+    slider.addEventListener('input', () => {
+      syncSlider(slider, unit);
+      invalidateResults();
+      renderFiles();
+    });
+  }
   weekUI.addEventListener('change', () => { syncExamOptions(); invalidateResults(); renderFiles(); });
   $('#clear-files').addEventListener('click', () => { uploaded.length = 0; invalidateResults(); renderFiles(); });
 

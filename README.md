@@ -102,3 +102,7 @@ Excel ve PDF için yazı punto bilgisi aynı ayardan beslenir. Chrome üzerinde 
 - Örnek: 16 hafta, bir imza, 8. hafta vize ve 16. hafta final, asgari 15 mm ile önceden oluşan 13+3 sütun yerine **8+8 sütun** oluşturulur.
 - Başlık bölgeleri, dar yatay bölümlerde birbirine girmesin diye Excel'de fiziksel sütun genişliğine göre tek sütunlu açıklama satırlarına dönüşür; PDF ve önizleme de bu durumu destekler.
 - Yerleşim regresyonları `.github/workflows/validate-layout.yml` ile otomatik çalıştırılır.
+
+## Canlı kaydırıcı ayarları (v10)
+
+"Yazdırma ve Sütun Ayarları" alanındaki **Asgari İmza Genişliği** (8–20 mm, 15 mm varsayılan), **Yazı Büyüklüğü** (6–14 pt, 8 pt varsayılan) ve **Ad Soyad Azami Genişliği** (30–80 mm, 58 mm varsayılan; ikişer mm adımlarla) artık erişilebilir HTML range kaydırıcılarıdır. Güncel değer, kaydırıcının yanında görüntülenir. Her `input` olayında ölçü önizlemesi ve üretim geçerliliği yenilenir; canlı A4 çizimi animasyon karesine göre güncellenir. Yazı tipi listesi kategorik bir tercih olduğu için açılır listede kalır.

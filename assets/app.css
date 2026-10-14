@@ -200,3 +200,93 @@ body.preview-expanded::before{
     flex-direction:column;align-items:stretch
   }
 }
+
+
+/* v10 — Live print settings sliders, with exact numeric readouts. */
+.layout-controls .range-setting{
+  min-width:0;
+  padding:11px 12px 9px;
+  background:linear-gradient(135deg,#fff 65%,#fff9fa);
+  border:1px solid #ecdde0;
+  border-radius:10px;
+}
+.layout-controls .range-setting-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:5px 8px;
+  margin-bottom:7px;
+}
+.layout-controls .range-setting-head .field-label{
+  margin:0;
+  flex:1 1 130px;
+  line-height:1.4;
+}
+.layout-controls .range-setting output{
+  min-width:49px;
+  padding:3px 7px;
+  border:1px solid #f0d2d8;
+  border-radius:6px;
+  background:#fff1f3;
+  color:#970d22;
+  font:700 12px/1.25 system-ui,sans-serif;
+  text-align:center;
+  white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+.layout-controls input[type="range"]{
+  display:block;
+  appearance:none;
+  -webkit-appearance:none;
+  background:linear-gradient(to right,#a40823 0%,#a40823 var(--slider-fill,50%),#e4e6ec var(--slider-fill,50%),#e4e6ec 100%);
+  height:6px;
+  width:100%;
+  padding:0;
+  margin:11px 0 10px;
+  outline:0;
+  border:0;
+  border-radius:999px;
+  box-shadow:none;
+  cursor:pointer;
+  accent-color:#a40823;
+  touch-action:pan-y;
+}
+.layout-controls input[type="range"]::-webkit-slider-thumb{
+  appearance:none;-webkit-appearance:none;
+  width:19px;height:19px;
+  border:3px solid #fff;
+  background:#a40823;
+  border-radius:50%;
+  box-shadow:0 0 0 1px #b82c44,0 2px 6px #6c091c33;
+}
+.layout-controls input[type="range"]::-moz-range-thumb{
+  width:14px;height:14px;
+  border:3px solid #fff;
+  background:#a40823;
+  border-radius:50%;
+  box-shadow:0 0 0 1px #b82c44,0 2px 6px #6c091c33;
+}
+.layout-controls input[type="range"]:focus-visible{
+  outline:3px solid #f0aab6;
+  outline-offset:5px;
+  box-shadow:none;
+}
+.layout-controls .range-setting-limits{
+  display:flex;justify-content:space-between;gap:8px;
+  color:#7b8495;font-size:10px;
+  font-variant-numeric:tabular-nums;
+}
+.layout-controls .range-font-select{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-width:0;
+  padding:0 3px;
+}
+.layout-controls .range-font-select select{
+  margin-top:0;
+}
+@media (max-width:580px){
+  .layout-controls{grid-template-columns:minmax(0,1fr)}
+}

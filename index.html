@@ -8,7 +8,7 @@
   <title>Yoklama Oluşturucu | İstanbul Rumeli Üniversitesi</title>
   <link rel="icon" type="image/png" href="./assets/rumeli-logo.png?v=4" />
   <link rel="apple-touch-icon" href="./assets/rumeli-logo.png?v=4" />
-  <link rel="stylesheet" href="./assets/app.css?v=9" />
+  <link rel="stylesheet" href="./assets/app.css?v=10" />
   <link rel="stylesheet" href="./assets/pdf.css?v=9" />
 </head>
 <body>
@@ -95,11 +95,31 @@
               <div class="layout-customizations" aria-labelledby="layout-custom-title">
                 <h3 id="layout-custom-title">Yazdırma ve Sütun Ayarları</h3>
                 <div class="field-grid layout-controls">
-                  <label><span class="field-label">Asgari İmza Genişliği <span class="info-tip" title="Genişlik artırılırsa imzalar daha rahat atılır; haftalar otomatik olarak daha fazla sayfaya dağıtılır.">ⓘ</span></span><select id="mark-width" aria-label="Asgari imza genişliği"></select></label>
-                  <label><span class="field-label">Yazı Büyüklüğü (pt) <span class="info-tip" title="Excel ve PDF dosyalarındaki metnin puntosu. Önceki sürüm 10 puntoydu; yeni varsayılan 8 punto.">ⓘ</span></span><select id="font-size" aria-label="Yazı büyüklüğü"></select></label>
-                  <label><span class="field-label">Yazı Tipi</span><select id="font-family" aria-label="Yazı tipi"><option value="Aptos" selected>Aptos</option><option value="Arial">Arial</option><option value="Calibri">Calibri</option><option value="Times New Roman">Times New Roman</option></select></label>
-                  <label><span class="field-label">Ad Soyad Azami Genişliği <span class="info-tip" title="En uzun öğrenci adına göre daralır, burada seçtiğiniz üst sınırı asla geçmez.">ⓘ</span></span><select id="name-max-width" aria-label="Ad Soyad azami genişliği"></select></label>
-                </div>
+                  <div class="range-setting">
+                    <div class="range-setting-head">
+                      <label class="field-label" for="mark-width">Asgari İmza Genişliği <span class="info-tip" title="Genişlik artırıldığında haftalar gerekirse yeni A4 sayfalarına aktarılır.">ⓘ</span></label>
+                      <output id="mark-width-value" for="mark-width">15 mm</output>
+                    </div>
+                    <input id="mark-width" type="range" min="8" max="20" step="1" value="15" aria-label="Asgari imza genişliği" />
+                    <div class="range-setting-limits"><span>8 mm</span><span>20 mm</span></div>
+                  </div>
+                  <div class="range-setting">
+                    <div class="range-setting-head">
+                      <label class="field-label" for="font-size">Yazı Büyüklüğü <span class="info-tip" title="Excel ve PDF dosyalarında kullanılan yazı puntosu.">ⓘ</span></label>
+                      <output id="font-size-value" for="font-size">8 pt</output>
+                    </div>
+                    <input id="font-size" type="range" min="6" max="14" step="1" value="8" aria-label="Yazı büyüklüğü" />
+                    <div class="range-setting-limits"><span>6 pt</span><span>14 pt</span></div>
+                  </div>
+                  <label class="range-font-select"><span class="field-label">Yazı Tipi</span><select id="font-family" aria-label="Yazı tipi"><option value="Aptos" selected>Aptos</option><option value="Arial">Arial</option><option value="Calibri">Calibri</option><option value="Times New Roman">Times New Roman</option></select></label>
+                  <div class="range-setting">
+                    <div class="range-setting-head">
+                      <label class="field-label" for="name-max-width">Ad Soyad Azami Genişliği <span class="info-tip" title="Sütun, en uzun öğrenci adına göre genişler ancak belirlenen üst sınırı aşmaz.">ⓘ</span></label>
+                      <output id="name-max-width-value" for="name-max-width">58 mm</output>
+                    </div>
+                    <input id="name-max-width" type="range" min="30" max="80" step="2" value="58" aria-label="Ad Soyad azami genişliği" />
+                    <div class="range-setting-limits"><span>30 mm</span><span>80 mm</span></div>
+                  </div>                </div>
                 <p class="layout-caption">Sıra: 7,5 mm · Öğrenci no: 21 mm. Ad Soyad sütunu öğrenci isimlerine göre, belirtilen azami genişliği aşmadan otomatik daralır.</p>
               </div>
               <p id="layout-preview" class="layout-preview" aria-live="polite">A4 yerleşimi hesaplanıyor...</p>
@@ -166,7 +186,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
   <script defer src="./assets/helpers.js?v=9"></script>
-  <script defer src="./assets/app.js?v=9"></script>
-  <script defer src="./assets/preview.js?v=9"></script>
+  <script defer src="./assets/app.js?v=10"></script>
+  <script defer src="./assets/preview.js?v=10"></script>
 </body>
 </html>
