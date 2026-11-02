@@ -32,8 +32,8 @@ const match=markup.match(/<colgroup>(.*?)<\/colgroup>/);
 assert(match);
 const widths=[...match[1].matchAll(/width:([\d.]+)px/g)].map(m=>Number(m[1]));
 assert.equal(widths.length,3+first.columns);
-assert(widths.slice(3,6).every(x=>Math.abs(x-9*96\/25.4)<0.02));
-assert(widths.slice(6).some(x=>x>15*96\/25.4-1));
+assert(widths.slice(3,6).every(x=>Math.abs(x-9*96/25.4)<0.02));
+assert(widths.slice(6).some(x=>x>15*96/25.4-1));
 for(let start=2;start<=15;start++){
  const pages=H.paperLayout(...settings,start);
  assert(pages.every(p=>p.totalWidthMm<=289.005));
