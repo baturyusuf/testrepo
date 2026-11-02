@@ -436,7 +436,7 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
             for page in range(physical_pages):
                 top=HEADER_ROWS+1+page*STUDENTS_PER_PAGE
                 c=ws.cell(top,first,closed_label(start_week,vertical))
-                c.font=Font(name=font_family,size=font_size_pt if vertical else round(font_size_pt*1.25),
+                c.font=Font(name=font_family,size=font_size_pt if vertical else font_size_pt*1.25,
                             bold=True,color=TEXT)
                 c.fill=PatternFill('solid',fgColor=EXAM_GRAY)
                 c.border=Border(left=hairline,right=hairline,top=hairline,bottom=hairline)

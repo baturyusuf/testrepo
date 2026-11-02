@@ -119,8 +119,29 @@ def verify_validation():
         except ValueError: pass
         else: raise AssertionError('Invalid startWeek accepted: '+repr(bad))
 
+
+def verify_report_examples():
+    """Independent expected Excel column ranges from the supplied acceptance report."""
+    default=layout.page_plan(16,1,8,16,15)
+    assert [[g.week for g in section] for section in default]==[list(range(1,9)),list(range(9,17))]
+    assert layout.closed_runs(default[0],2)==[(4,4)]
+    assert layout.closed_runs(default[0],3)==[(4,5)]
+    assert layout.closed_runs(default[0],4)==[(4,6)]
+    assert layout.closed_runs(default[1],10)==[(4,4)]
+    assert layout.closed_runs(default[1],15)==[(4,9)]
+    assert not layout.has_open_week(default[0],8)
+    triple=layout.page_plan(16,3,8,16,15)
+    assert [g[0].week for g in triple]==[1,5,9,13]
+    assert layout.closed_runs(triple[0],4)==[(4,12)]
+    assert layout.closed_runs(triple[1],6)==[(4,6)]
+    assert not layout.has_open_week(triple[1],8)
+    with_exam=layout.page_plan(16,1,6,16,15)
+    assert layout.closed_runs(with_exam[0],8)==[(4,8),(10,10)]
+    assert with_exam[0][5].kind=='exam'
+
 if __name__=='__main__':
     checked=sum(verify(c,n) for c in CONFIGS for n in (1,40,105))
     verify_first_week()
+    verify_report_examples()
     verify_validation()
     print('Start week Excel regression: '+str(checked)+' configurations passed')
