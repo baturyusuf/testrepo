@@ -397,7 +397,7 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
             elif g.span > 1:
                 ws.merge_cells(start_row=5,start_column=start,end_row=5,end_column=end)
             c=ws.cell(5,start,g.label)
-            c.font=Font(name=font_family,size=font_pt(8 if g.span>1 else 7),bold=True,strike=closed,color=(CLOSED_TEXT_ON_BURGUNDY if closed else WHITE) if g.kind=='week' else TEXT)
+            c.font=Font(name=font_family,size=font_pt(8 if g.span>1 else 7),bold=True,strike=True if closed else None,color=(CLOSED_TEXT_ON_BURGUNDY if closed else WHITE) if g.kind=='week' else TEXT)
             c.fill=PatternFill('solid',fgColor=BURGUNDY if g.kind=='week' else EXAM_GRAY)
             c.alignment=Alignment(horizontal='center',vertical='center',wrap_text=True,shrink_to_fit=True)
             c.border=Border(left=hairline,right=hairline,bottom=hairline)
@@ -406,7 +406,7 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
                     continue
                 x=ws.cell(6,start+mark_i)
                 x.value=f'{mark_i+1}. İMZA' if g.kind=='week' else 'SINAV'
-                x.font=Font(name=font_family,size=font_pt(7),bold=True,strike=closed,color=CLOSED_TEXT if closed else TEXT)
+                x.font=Font(name=font_family,size=font_pt(7),bold=True,strike=True if closed else None,color=CLOSED_TEXT if closed else TEXT)
                 x.alignment=Alignment(horizontal='center',vertical='center',shrink_to_fit=True)
                 x.fill=PatternFill('solid',fgColor=PALE if g.kind=='week' else EXAM_GRAY)
                 x.border=Border(left=hairline,right=hairline,bottom=hairline)
