@@ -28,35 +28,42 @@
   }
 
   // Physical A4 planner mirrored by adaptive_layout.py (in mm).
-  function paperLayout(weeks, signatures, midterm, final, minWidthMm = 15, nameMaxWidthMm = 58) {
-    [weeks, signatures, midterm, final, minWidthMm, nameMaxWidthMm] =
-      [weeks, signatures, midterm, final, minWidthMm, nameMaxWidthMm].map(Number);
+  function paperLayout(weeks, signatures, midterm, final, minWidthMm = 15, nameMaxWidthMm = 58, startWeek = 1) {
+    [weeks, signatures, midterm, final, minWidthMm, nameMaxWidthMm, startWeek] =
+      [weeks, signatures, midterm, final, minWidthMm, nameMaxWidthMm, startWeek].map(Number);
     if (![weeks,signatures,midterm,final].every(Number.isInteger) ||
         weeks < 10 || weeks > 20 || signatures < 1 || signatures > 5 ||
         midterm < 1 || midterm >= final || final > weeks ||
         !Number.isFinite(minWidthMm) || minWidthMm < 8 || minWidthMm > 20 ||
-        !Number.isFinite(nameMaxWidthMm) || nameMaxWidthMm < 30 || nameMaxWidthMm > 80)
+        !Number.isFinite(nameMaxWidthMm) || nameMaxWidthMm < 30 || nameMaxWidthMm > 80 ||
+        !Number.isInteger(startWeek) || startWeek < 1 ||
+        startWeek > lastSignatureWeek(weeks,midterm,final))
       throw new RangeError('Sayfa, imza genişliği veya vize/final seçimi geçersiz.');
     // Conservative layout preview assumes the Name column reaches its maximum.
     // Actual sheet calculation uses the longest student name, and may fit more weeks.
     const capacity = 289 - 7.5 - 21 - nameMaxWidthMm;
+    const closedWidthMm = 9;
     const groups = Array.from({length:weeks}, (_,i) => ({
-      week:i+1, span:(i+1===midterm || i+1===final) ? 1 : signatures
+      week:i+1,
+      closed:i+1<startWeek && i+1!==midterm && i+1!==final,
+      span:(i+1===midterm || i+1===final || i+1<startWeek) ? 1 : signatures
     }));
     // Identical lexicographic optimization to adaptive_layout.py:
     // fewest sections, then lowest sum of squared signature-column counts.
     const dp = Array(weeks+1).fill(null);
     dp[weeks] = {count:0,squareSum:0,sections:[]};
     for (let start=weeks-1;start>=0;start--) {
-      let used=0, best=null;
+      let active=0, closed=0, best=null;
       for (let end=start+1;end<=weeks;end++) {
-        used+=groups[end-1].span;
-        if (used*minWidthMm > capacity+1e-9) break;
+        if (groups[end-1].closed) closed++;
+        else active+=groups[end-1].span;
+        if (active*minWidthMm+closed*closedWidthMm > capacity+1e-9) break;
         const remainder=dp[end];
         if (!remainder) continue;
+        const weight=active+closed*closedWidthMm/minWidthMm;
         const candidate={
           count:remainder.count+1,
-          squareSum:remainder.squareSum+used*used,
+          squareSum:remainder.squareSum+weight*weight,
           sections:[groups.slice(start,end),...remainder.sections]
         };
         if (!best || candidate.count<best.count ||
@@ -68,15 +75,23 @@
     const pages=dp[0].sections;
     return pages.map(g=>{
       const columns = g.reduce((n,entry)=>n+entry.span,0);
-      const markWidthMm = Math.round(Math.min(Math.max(18,minWidthMm),capacity/columns)*10000)/10000;
+      const closedColumns=g.reduce((n,entry)=>n+(entry.closed?1:0),0);
+      const activeColumns=columns-closedColumns;
+      const markWidthMm = activeColumns
+        ? Math.round(Math.min(Math.max(18,minWidthMm),
+            (capacity-closedColumns*closedWidthMm)/activeColumns)*10000)/10000
+        : Math.max(18,minWidthMm);
       return {
         start:g[0].week,end:g[g.length-1].week,
         columns,
         minWidthMm:markWidthMm, markWidthMm,
         fixedWidthsMm:[7.5,21,nameMaxWidthMm],
-        totalWidthMm:7.5+21+nameMaxWidthMm+columns*markWidthMm,
+        totalWidthMm:7.5+21+nameMaxWidthMm+
+          closedColumns*closedWidthMm+activeColumns*markWidthMm,
+        closedWidthMm,closedColumns,activeColumns,
         groups:g.map(entry=>({
           week:entry.week,span:entry.span,
+          widthMm:entry.closed?closedWidthMm:markWidthMm,
           kind:entry.week===midterm || entry.week===final?'exam':'week',
           label:entry.week===midterm?`VİZE SINAVI · ${entry.week}. HAFTA`
                 :entry.week===final?`FİNAL SINAVI · ${entry.week}. HAFTA`:`${entry.week}. HAFTA`
