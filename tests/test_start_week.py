@@ -61,7 +61,10 @@ def verify(config,n):
             opened=load_workbook(output)
             assert len(opened.worksheets)==len(kept)
             for index,(ws,section,part) in enumerate(zip(opened.worksheets,sections,kept)):
-                assert print_config(output,index)[1:]==print_config(original,0)[1:]
+                assert ws.page_setup.orientation=='landscape'
+                assert ws.page_setup.fitToWidth==1
+                assert ws.row_dimensions[7].height==layout.STUDENT_HEIGHT_PT
+                assert len(ws.row_breaks.brk)==len(section['pages'])-1
                 assert section['markWidthMm']>=config[-1]-0.001
                 assert section['startWeek']==start and section['totalSections']==len(packed)
                 assert [g['week'] for g in section['groups']]==[g.week for g in part]
