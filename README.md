@@ -122,3 +122,25 @@ sınav haftası bir kapanan aralığı iki ayrı bloğa böler. İmza atılacak 
 yatay bölümler Excel, PDF ve önizlemeden çıkarılır, ancak diğer bölümlerin adları,
 sütun genişlikleri ve A4 sayfa planı değişmez. Başlangıç haftasını değiştirmek
 oluşturulmuş sonuçları geçersiz kılar.
+
+
+## Kapalı haftalarda sütun tasarrufu (v13)
+
+Başlangıç haftası 1'den büyük olduğunda, daha önce işlenmiş **her normal hafta**,
+haftalık imza sayısı 1–5 arasında ne olursa olsun **9 mm genişliğinde tek bir sütun**
+kullanır. Sütun başlıkları haftayı göstermeye devam eder; bitişik kapalı sütunların
+17 öğrenci satırındaki gövde alanı, v12'deki uyarı metnini içeren tek gri blok olarak
+birleştirilir. Vize/final **sınav** sütunları daraltılmaz; ayrıca aradaki vize
+gri bölgeyi ayrı bloklara böler.
+
+A4 yatay sayfa planı fiziksel genişliklerle **yeniden hesaplanır**:
+kapalı normal hafta = 9 mm, açık haftanın her imzası ve sınavlar = kullanıcı
+tarafından belirlenen en az 8–20 mm. Açık imzalar, mümkünse 18 mm'ye
+kadar genişletilir. Önizleme, Excel ve PDF aynı grup/sütun genişliğini
+kullanır; tamamen kapalı yatay bölümler v12'deki gibi atlanır.
+Yazdırma alanı, 17 öğrenci/sayfa, başlık ve vize/final ayrımı korunur.
+Başlangıç haftası **1** olduğunda v12 Excel XML'i ve PDF HTML'i değişmez.
+
+Bu davranış [PR #2 geri bildirimi](https://github.com/baturyusuf/testrepo/pull/2#issuecomment-6578850105)
+üzerine eklendi. Regresyonlar: `tests/test_compact_weeks.py`,
+`tests/test_compact_weeks.cjs`, `tests/test_compact_parity.cjs`.
