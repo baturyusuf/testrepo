@@ -52,7 +52,7 @@ def generate(payload):
            'fontSizePt':font_size_pt,'fontFamily':font_family,'nameMaxWidthMm':name_max_mm,
            'horizontalSectionsConservative':len(layout.page_plan(weeks,signatures,midterm,final,min_mark_mm,
               (layout.SERIAL_WIDTH_MM,layout.STUDENT_NUMBER_WIDTH_MM,name_max_mm),
-              start_week)))}}
+              start_week))}}
     for index, submitted in enumerate(settings.get('files', []), 1):
         try:
             name=_clean_name(submitted['name'])
