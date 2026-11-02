@@ -110,3 +110,15 @@ Excel ve PDF için yazı punto bilgisi aynı ayardan beslenir. Chrome üzerinde 
 ## Tek imzalı hafta başlıkları (v11)
 
 Haftalık imza sayısı **1** seçildiğinde Excel'de hafta başlığı 5. ve 6. satır boyunca birleştirilir; ikinci satıra `1. İMZA` yazılmaz. PDF ve canlı A4 önizlemesi aynı başlığı tek ve iki satır yüksekliğinde gösterir. Haftalık imza sayısı **2–5** ise numaralı imza alt başlıkları korunur.
+
+
+## Belirli haftadan başlatma (v12)
+
+Yoklama listesini dönem ortasında yeniden oluştururken **Başlangıç Haftası** seçilebilir (varsayılan: 1).
+Seçilen haftadan **önceki imza haftaları**, her A4 sayfasının 17 öğrenci satırını kapsayan tek gri
+blokla imzaya kapatılır. Gri blokta gerekçe yazılıdır; dar bloklarda açıklama dikeydir.
+Hafta ve imza başlıkları soluk ve üstü çizili gösterilir. Vize/final sütunları değişmez;
+sınav haftası bir kapanan aralığı iki ayrı bloğa böler. İmza atılacak haftası kalmayan
+yatay bölümler Excel, PDF ve önizlemeden çıkarılır, ancak diğer bölümlerin adları,
+sütun genişlikleri ve A4 sayfa planı değişmez. Başlangıç haftasını değiştirmek
+oluşturulmuş sonuçları geçersiz kılar.
