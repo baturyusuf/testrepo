@@ -27,7 +27,8 @@ def generate(payload):
         settings.get('fontSizePt', layout.FONT_DEFAULT_PT),
         settings.get('fontFamily', 'Aptos'),
         settings.get('nameMaxWidthMm', layout.NAME_MAX_DEFAULT_MM))
-    settings.update(weeks=weeks, signatures=signatures, midterm=midterm, final=final,
+    start_week = layout.validate_start_week(settings.get('startWeek', 1), weeks, midterm, final)
+    settings.update(weeks=weeks, signatures=signatures, midterm=midterm, final=final, startWeek=start_week,
                     minMarkWidthMm=min_mark_mm, fontSizePt=font_size_pt,
                     fontFamily=font_family, nameMaxWidthMm=name_max_mm)
     course = ' '.join(str(settings.get('course') or '').split())
@@ -47,7 +48,7 @@ def generate(payload):
         shutil.rmtree(output)
     output.mkdir(parents=True)
     result={'results':[], 'errors':[], 'configuration':{'weeks':weeks,'signatures':signatures,
-           'midterm':midterm,'final':final,'minMarkWidthMm':min_mark_mm,
+           'midterm':midterm,'final':final,'startWeek':start_week,'minMarkWidthMm':min_mark_mm,
            'fontSizePt':font_size_pt,'fontFamily':font_family,'nameMaxWidthMm':name_max_mm,
            'horizontalSectionsConservative':len(layout.page_plan(weeks,signatures,midterm,final,min_mark_mm,
               (layout.SERIAL_WIDTH_MM,layout.STUDENT_NUMBER_WIDTH_MM,name_max_mm)))}}

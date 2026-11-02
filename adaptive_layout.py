@@ -51,6 +51,10 @@ WHITE = "FFFFFF"
 TEXT = "24202A"
 LIGHT_LINE = "A6A6AD"
 
+CLOSED_TEXT = "808080"
+CLOSED_TEXT_ON_BURGUNDY = "D9D9D9"
+CLOSED_VERTICAL_BELOW_MM = 32.0
+
 
 @dataclass(frozen=True)
 class Group:
@@ -84,6 +88,57 @@ def groups_for_weeks(weeks, signatures, midterm, final):
         else:
             groups.append(Group(week, 'week', f'{week}. HAFTA', signatures))
     return groups
+
+
+
+def last_signature_week(weeks, midterm, final):
+    """The last week that can receive a signature (exam weeks are excluded)."""
+    return max(week for week in range(1, int(weeks) + 1) if week not in (int(midterm), int(final)))
+
+
+def validate_start_week(start_week, weeks, midterm, final):
+    """Accept integer selections and integer strings, reject fractions/bools/NaN."""
+    if isinstance(start_week, bool):
+        raise ValueError('Başlangıç haftası tam sayı olmalıdır')
+    try:
+        number = int(start_week)
+        if isinstance(start_week, float) and (not math.isfinite(start_week) or number != start_week):
+            raise ValueError('Başlangıç haftası tam sayı olmalıdır')
+        if isinstance(start_week, str) and not re.fullmatch(r'[0-9]+', start_week):
+            raise ValueError('Başlangıç haftası tam sayı olmalıdır')
+        if not isinstance(start_week, (int, float, str)):
+            raise ValueError('Başlangıç haftası tam sayı olmalıdır')
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError('Başlangıç haftası tam sayı olmalıdır') from exc
+    last = last_signature_week(weeks, midterm, final)
+    if not 1 <= number <= last:
+        raise ValueError(f'Başlangıç haftası 1 ile {last} arasında olmalıdır')
+    return number
+
+
+def is_closed(group, start_week):
+    return group.kind == 'week' and group.week < start_week
+
+
+def has_open_week(groups, start_week):
+    return any(g.kind == 'week' and g.week >= start_week for g in groups)
+
+
+def closed_runs(groups, start_week):
+    """Closed signature columns (inclusive); an exam column splits the run."""
+    runs, col = [], 4
+    for group in groups:
+        if is_closed(group, start_week):
+            if runs and runs[-1][1] + 1 == col:
+                runs[-1] = (runs[-1][0], col + group.span - 1)
+            else:
+                runs.append((col, col + group.span - 1))
+        col += group.span
+    return runs
+
+
+def closed_label(start_week, vertical):
+    return f'{start_week}. HAFTADAN ÖNCEKİ HAFTALAR' + (' ' if vertical else '\n') + 'BU LİSTEDE İMZALANMAZ'
 
 
 def validate_presentation(min_mark_mm=MARK_MIN_MM, font_size_pt=FONT_DEFAULT_PT,
@@ -225,7 +280,7 @@ def _name_for_sheet(groups, index):
 
 def build_workbook(students, department, course, instructor, title, weeks, signatures, midterm, final,
                    min_mark_mm=MARK_MIN_MM, font_size_pt=FONT_DEFAULT_PT,
-                   font_family='Aptos', name_max_mm=NAME_MAX_DEFAULT_MM):
+                   font_family='Aptos', name_max_mm=NAME_MAX_DEFAULT_MM, start_week=1):
     """Return an A4 workbook + the exact dimensions/fonts for the PDF renderer."""
     min_mark_mm, font_size_pt, font_family, name_max_mm = validate_presentation(
         min_mark_mm, font_size_pt, font_family, name_max_mm)
@@ -234,6 +289,7 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
     name_width = estimated_name_width_mm(students, font_size_pt, name_max_mm, font_family)
     fixed_widths = (SERIAL_WIDTH_MM, STUDENT_NUMBER_WIDTH_MM, name_width)
     segments = page_plan(weeks, signatures, midterm, final, min_mark_mm, fixed_widths)
+    start_week = validate_start_week(start_week, weeks, midterm, final)
     # Old size is now 2 pt smaller by default. All text groups follow the slider.
     size_offset = font_size_pt - 10
     def font_pt(previous, lower=6):
@@ -251,6 +307,8 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
     thickline = Side(style='medium', color=BURGUNDY)
     total_segments = len(segments)
     for i, groups in enumerate(segments, 1):
+        if not has_open_week(groups, start_week):
+            continue
         ws = wb.create_sheet(_name_for_sheet(groups, i))
         width = mark_width_mm(groups, min_mark_mm, fixed_widths)
         total_marks = sum(g.span for g in groups)
@@ -331,6 +389,7 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
         for g in groups:
             start=mark_col
             end=mark_col+g.span-1
+            closed=is_closed(g,start_week)
             if g.kind == 'week' and g.span == 1:
                 # Exactly one weekly signature: merge the week heading vertically
                 # across the two header rows; do not create a "1. İMZA" label.
@@ -338,7 +397,7 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
             elif g.span > 1:
                 ws.merge_cells(start_row=5,start_column=start,end_row=5,end_column=end)
             c=ws.cell(5,start,g.label)
-            c.font=Font(name=font_family,size=font_pt(8 if g.span>1 else 7),bold=True,color=WHITE if g.kind=='week' else TEXT)
+            c.font=Font(name=font_family,size=font_pt(8 if g.span>1 else 7),bold=True,strike=closed,color=(CLOSED_TEXT_ON_BURGUNDY if closed else WHITE) if g.kind=='week' else TEXT)
             c.fill=PatternFill('solid',fgColor=BURGUNDY if g.kind=='week' else EXAM_GRAY)
             c.alignment=Alignment(horizontal='center',vertical='center',wrap_text=True,shrink_to_fit=True)
             c.border=Border(left=hairline,right=hairline,bottom=hairline)
@@ -347,7 +406,7 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
                     continue
                 x=ws.cell(6,start+mark_i)
                 x.value=f'{mark_i+1}. İMZA' if g.kind=='week' else 'SINAV'
-                x.font=Font(name=font_family,size=font_pt(7),bold=True,color=TEXT)
+                x.font=Font(name=font_family,size=font_pt(7),bold=True,strike=closed,color=CLOSED_TEXT if closed else TEXT)
                 x.alignment=Alignment(horizontal='center',vertical='center',shrink_to_fit=True)
                 x.fill=PatternFill('solid',fgColor=PALE if g.kind=='week' else EXAM_GRAY)
                 x.border=Border(left=hairline,right=hairline,bottom=hairline)
@@ -369,6 +428,22 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
                 c.alignment=Alignment(horizontal='left' if col==3 else 'center',vertical='center',wrap_text=col==3,shrink_to_fit=True)
                 pt = name_font_sizes[idx] if col == 3 and idx < total_students else (font_size_pt if col == 3 else max(6,font_size_pt-1))
                 c.font=Font(name='Aptos Narrow' if col==3 and font_family=='Aptos' else font_family,size=pt,bold=(col==3),color=TEXT)
+
+        # One merged block per closed run and per physical A4 page, including empty rows.
+        # The planner and the original row/column dimensions are never recalculated.
+        for first,last in closed_runs(groups,start_week):
+            vertical=(last-first+1)*width<CLOSED_VERTICAL_BELOW_MM
+            for page in range(physical_pages):
+                top=HEADER_ROWS+1+page*STUDENTS_PER_PAGE
+                c=ws.cell(top,first,closed_label(start_week,vertical))
+                c.font=Font(name=font_family,size=font_size_pt if vertical else round(font_size_pt*1.25),
+                            bold=True,color=TEXT)
+                c.fill=PatternFill('solid',fgColor=EXAM_GRAY)
+                c.border=Border(left=hairline,right=hairline,top=hairline,bottom=hairline)
+                c.alignment=Alignment(horizontal='center',vertical='center',wrap_text=True,
+                                      textRotation=90 if vertical else 0)
+                ws.merge_cells(start_row=top,start_column=first,
+                               end_row=top+STUDENTS_PER_PAGE-1,end_column=last)
         _print_setup(ws,last_col,last_row)
         pages=[]
         for page in range(physical_pages):
@@ -389,6 +464,7 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
             'compactMeta':compact_meta,
             'printableWidthMm':PRINTABLE_MM,'totalWidthMm':round(sum(fixed_widths)+total_marks*width,3),
             'weekStart':groups[0].week,'weekEnd':groups[-1].week,
+            'startWeek':start_week,'totalSections':total_segments,
         })
     return wb,layouts,blank
 
@@ -400,7 +476,8 @@ def create_file(obs_path:Path,output_dir:Path,settings:dict):
            f'{core.tr_buyuk(settings["semester"])} DÖNEMİ DERS YOKLAMA LİSTESİ')
     wb,layouts,blank=build_workbook(
         students,department,settings['course'],settings['instructor'],title,weeks,signatures,midterm,final,
-        settings['minMarkWidthMm'],settings['fontSizePt'],settings['fontFamily'],settings['nameMaxWidthMm'])
+        settings['minMarkWidthMm'],settings['fontSizePt'],settings['fontFamily'],settings['nameMaxWidthMm'],
+        settings.get('startWeek',1))
     output_dir.mkdir(parents=True,exist_ok=True)
     course_code=re.sub(r'[^\w-]','',settings['course'].split('-',1)[0],flags=re.UNICODE)[:30] or 'DERS'
     branch=re.sub(r'[^\w-]','',obs_path.stem.rsplit('-',1)[-1],flags=re.UNICODE).upper()[:26] or 'SUBE'
