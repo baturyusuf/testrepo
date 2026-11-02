@@ -18,6 +18,7 @@
   const nameMaxUI = $('#name-max-width');
   const midtermUI = $('#midterm-week');
   const finalUI = $('#final-week');
+  const startWeekUI = $('#start-week');
   const helpers = window.YoklamaHelpers;
   if (!helpers) throw new Error('Yoklama tarih ve dosya yardımcıları yüklenemedi.');
   const generateBtn = $('#generate');
@@ -69,6 +70,13 @@
   const weekCount = () => Number(weekUI.value);
   const midtermWeek = () => Number(midtermUI.value);
   const finalWeek = () => Number(finalUI.value);
+  const startWeek = () => Number(startWeekUI.value) || 1;
+  function syncStartWeekOptions() {
+    const last = helpers.lastSignatureWeek(weekCount(),midtermWeek(),finalWeek());
+    const previous = startWeek();
+    startWeekUI.replaceChildren(...Array.from({length:last},(_,i)=>new Option(String(i+1),String(i+1))));
+    startWeekUI.value = String(Math.min(Math.max(1,previous),last));
+  }
 
   function syncExamOptions() {
     const total = weekCount();
@@ -78,12 +86,14 @@
     finalUI.replaceChildren(...Array.from({length:total - 1},(_,i)=>new Option(String(i+2),String(i+2))));
     midtermUI.value = String(Math.min(oldMidterm,total-1));
     finalUI.value = String(Math.min(oldFinal,total));
+    syncStartWeekOptions();
     updatePlanPreview();
   }
   function updatePlanPreview() {
     const node = $('#layout-preview');
     try {
-      const plan = helpers.paperLayout(weekCount(),signatureCount(),midtermWeek(),finalWeek(),minMarkWidth(),nameMaxWidth());
+      const plan = helpers.paperLayout(weekCount(),signatureCount(),midtermWeek(),finalWeek(),minMarkWidth(),nameMaxWidth())
+        .filter(page=>helpers.hasOpenWeek(page.groups,startWeek()));
       const minWidth = Math.min(...plan.map(p=>p.minWidthMm));
       node.textContent = `A4 yatay: tahmini ${plan.length} bölüm · imza alanı ≥ ${minMarkWidth()} mm · ad soyad ≤ ${nameMaxWidth()} mm · yazı ${fontSizePt()} pt · en fazla 17 öğrenci/sayfa`;
       node.classList.remove('layout-error');
@@ -151,7 +161,8 @@
     renderFiles();
   }));
   instructorUI.addEventListener('input', () => { invalidateResults(); renderFiles(); });
-  [yearUI, semesterUI, $('#signature-select'), midtermUI, finalUI, fontFamilyUI].forEach(el => el.addEventListener('change', () => {
+  [midtermUI,finalUI].forEach(el=>el.addEventListener('change',syncStartWeekOptions));
+  [yearUI, semesterUI, $('#signature-select'), midtermUI, finalUI, startWeekUI, fontFamilyUI].forEach(el => el.addEventListener('change', () => {
     invalidateResults(); updatePlanPreview(); renderFiles();
   }));
   for (const [slider, unit] of sliderSettings) {
@@ -255,6 +266,26 @@
     const tableWidthPx = sheetWidthMm * pxPerMm;
     el.style.setProperty('--paper-content-width', `${tableWidthPx.toFixed(3)}px`);
     const colDefs = colWidths.map(mm=>`<col style="width:${(mm * pxPerMm).toFixed(3)}px">`).join('');
+    // Contiguous closed signature columns become one gray block on each A4 page.
+    // Exam columns are never part of a run.
+    const firstOpenWeek = Number(sheet.startWeek || 1);
+    const isClosed = group => group.kind === 'week' && group.week < firstOpenWeek;
+    const closedClass = group => isClosed(group) ? ' closed-week' : '';
+    const closedRuns = [];
+    groups.reduce((column, group) => {
+      const lastRun = closedRuns[closedRuns.length-1];
+      if (isClosed(group)) {
+        if (lastRun && lastRun.first + lastRun.span === column) lastRun.span += group.span;
+        else closedRuns.push({first:column,span:group.span});
+      }
+      return column + group.span;
+    },0);
+    const closedCell = run => {
+      const vertical = run.span * markWidth < 32;
+      const label = `${firstOpenWeek}. HAFTADAN ÖNCEKİ HAFTALAR${vertical?' ':'<br>'}BU LİSTEDE İMZALANMAZ`;
+      return `<td class="exam-cell closed-block${vertical?' closed-vertical':''}" colspan="${run.span}" rowspan="${rows.length}"><span class="closed-text">${label}</span></td>`;
+    };
+    el.style.setProperty('--closed-font-px',`${(fontPt*1.25*96/72).toFixed(2)}px`);
     const hasNumberedSignatureHeaders = groups.some(group =>
       group.kind === 'week' && group.span > 1);
     const firstLine = groups.map(group => {
@@ -264,18 +295,35 @@
         const attributes = hasNumberedSignatureHeaders
           ? (group.span === 1 ? 'rowspan="2"' : `colspan="${group.span}"`)
           : '';
-        return `<th class="week-header" ${attributes}>${html(group.label)}</th>`;
+        return `<th class="week-header${closedClass(group)}" ${attributes}>${html(group.label)}</th>`;
       }
       return `<th class="exam-header" colspan="${group.span}"${hasNumberedSignatureHeaders ? ' rowspan="2"' : ''}>${html(group.label)}</th>`;
     }).join('');
     const secondLine = hasNumberedSignatureHeaders
       ? groups.map(group => group.kind === 'week' && group.span > 1
-        ? Array.from({length: group.span}, (_, i) => `<th>${i + 1}. İMZA</th>`).join('')
+        ? Array.from({length: group.span}, (_, i) => `<th${isClosed(group) ? ' class="closed-week"' : ''}>${i + 1}. İMZA</th>`).join('')
         : '').join('')
       : '';
     const studentHeaderSpan = hasNumberedSignatureHeaders ? ' rowspan="2"' : '';
     const tableHead = `<tr class="week-top${hasNumberedSignatureHeaders ? '' : ' single-signature'}"><th${studentHeaderSpan}>SIRA</th><th${studentHeaderSpan}>NUMARA</th><th${studentHeaderSpan}>AD SOYAD</th>${firstLine}</tr>${hasNumberedSignatureHeaders ? `<tr class="week-sub">${secondLine}</tr>` : ''}`;
-    const body = rows.map(row => `<tr class="student-row" style="height:${((sheet.rowHeightPt || 23.5) * 96/72).toFixed(2)}px"><td class="rank">${html(row.rank)}</td><td class="num">${html(row.number)}</td><td class="name" style="font-size:${((Number(row.nameFontPt || sheet.fontSizePt || 8))*96/72).toFixed(2)}px">${html(row.name)}</td>${groups.map(group => Array.from({length:group.span}, () => `<td class="${group.kind === 'exam' ? 'exam-cell' : ''}"></td>`).join('')).join('')}</tr>`).join('');
+    // Rowspan/colspan are emitted once at the first row; subsequent rows
+    // skip those grid columns while leaving student data and exam cells unchanged.
+    const markCells = rowIndex => {
+      let column = 0;
+      let cells = '';
+      for (const group of groups) {
+        for (let i=0;i<group.span;i++,column++) {
+          const run=closedRuns.find(item=>column>=item.first && column<item.first+item.span);
+          if (run) {
+            if (rowIndex===0 && column===run.first) cells+=closedCell(run);
+          } else {
+            cells+=`<td class="${group.kind === 'exam' ? 'exam-cell' : ''}"></td>`;
+          }
+        }
+      }
+      return cells;
+    };
+    const body = rows.map((row,rowIndex) => `<tr class="student-row" style="height:${((sheet.rowHeightPt || 23.5) * 96/72).toFixed(2)}px"><td class="rank">${html(row.rank)}</td><td class="num">${html(row.number)}</td><td class="name" style="font-size:${((Number(row.nameFontPt || sheet.fontSizePt || 8))*96/72).toFixed(2)}px">${html(row.name)}</td>${markCells(rowIndex)}</tr>`).join('');
 
     el.innerHTML = `<div class="print-head">${html(sheet.title)}</div><div class="print-meta${compactMeta ? ' compact' : ''}"><div class="meta-cell"><strong>Ders Kodu ve İsmi</strong><span>${html(sheet.course)}</span></div><div class="meta-cell"><strong>Dersin Öğretim Elemanı ve İmzası</strong><span>${html(sheet.instructor)}</span></div></div><div class="print-department">${html(sheet.department)}</div><table style="width:${tableWidthPx.toFixed(3)}px"><colgroup>${colDefs}</colgroup><thead>${tableHead}</thead><tbody>${body}</tbody></table><span class="page-mark">${html(sheet.name)} · ${pageNum} / ${pageTotal}</span>`;
     return el;
@@ -339,6 +387,7 @@
     const weeks = weekCount();
     const midterm = midtermWeek();
     const final = finalWeek();
+    const firstOpenWeek = startWeek();
     const course = courseUI.value.trim();
     const minMarkWidthMm = minMarkWidth();
     const fontSize = fontSizePt();
@@ -358,7 +407,7 @@
         py.FS.writeFile(`${path}/${safeName(f.name)}`, new Uint8Array(await f.arrayBuffer()));
         descriptors.push({name:f.name});
       }
-      const payload = JSON.stringify({signatures, weeks, midterm, final, minMarkWidthMm, fontSizePt:fontSize, fontFamily, nameMaxWidthMm, course, instructor:instructorUI.value.trim(), academicYear, semester, files:descriptors});
+      const payload = JSON.stringify({signatures, weeks, midterm, final, startWeek:firstOpenWeek, minMarkWidthMm, fontSizePt:fontSize, fontFamily, nameMaxWidthMm, course, instructor:instructorUI.value.trim(), academicYear, semester, files:descriptors});
       py.globals.set('browser_payload', payload);
       const response = await py.runPythonAsync('import web_bridge; web_bridge.generate(browser_payload)');
       const manifest = JSON.parse(response);
@@ -372,7 +421,7 @@
           await tick();
           try {
             const pdfBytes = await createPDF(sheet, signatures);
-            const filename = item.sheets.length === 1 ? item.filename.replace(/\.xlsx$/i,'.pdf') : item.filename.replace(/\.xlsx$/i,` - ${sheet.name}.pdf`);
+            const filename = sheet.totalSections === 1 ? item.filename.replace(/\.xlsx$/i,'.pdf') : item.filename.replace(/\.xlsx$/i,` - ${sheet.name}.pdf`);
             built.push({id:`pdf-${i}-${sheet.name}`,inputIndex:i,ext:'pdf',label:sheet.name,name:filename,zipName:uniquePath(`Yoklamalar/PDF/${filename}`,seen),mime:'application/pdf',bytes:pdfBytes});
           } catch(error) {
             stage.replaceChildren();

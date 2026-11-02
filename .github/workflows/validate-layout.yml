@@ -1,13 +1,15 @@
 name: Validate yoklama layout
 on:
   push:
-    branches: [gh-pages, preview-layout-v9, preview-sliders-v10, single-signature-header-v11]
+    branches: [gh-pages, preview-layout-v9, preview-sliders-v10, single-signature-header-v11, start-week-v12]
   workflow_dispatch:
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # v11 vs v12 byte-for-byte output regression
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -26,7 +28,11 @@ jobs:
           node tests/test_balanced_sections.cjs
           node tests/test_slider_controls.cjs
           node tests/test_single_signature_header.cjs
+          node tests/test_start_week.cjs
+          node tests/test_v11_baseline.cjs
       - name: Python Excel regressions
         run: |
           python -m py_compile adaptive_layout.py web_bridge.py yoklama_olustur.py
           python tests/test_adaptive_layout.py
+          python tests/test_start_week.py
+          python tests/test_v11_baseline.py

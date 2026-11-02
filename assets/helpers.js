@@ -84,7 +84,15 @@
       };
     });
   }
-  const api = Object.freeze({academicDefaults, archiveFilename, paperLayout});
+  function lastSignatureWeek(weeks, midterm, final) {
+    for (let week=Number(weeks);week>=1;week--)
+      if (week!==Number(midterm) && week!==Number(final)) return week;
+    throw new RangeError('İmza atılacak hafta bulunamadı.');
+  }
+  function hasOpenWeek(groups, startWeek) {
+    return groups.some(group=>group.kind==='week' && group.week>=startWeek);
+  }
+  const api = Object.freeze({academicDefaults, archiveFilename, paperLayout, lastSignatureWeek, hasOpenWeek});
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.YoklamaHelpers = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -50,6 +50,7 @@
       signatures:Number($('#signature-select').value),
       midterm:Number($('#midterm-week').value),
       final:Number($('#final-week').value),
+      startWeek:Number($('#start-week').value) || 1,
       markMin:Number($('#mark-width').value),
       nameMax:Number($('#name-max-width').value),
       fontPt:Number($('#font-size').value),
@@ -72,6 +73,7 @@
       instructor:values.instructor || 'Öğretim Elemanı',
       department:'ÖRNEK BÖLÜM / PROGRAM',
       groups:plan.groups,
+      startWeek:values.startWeek,
       fixedWidthsMm:plan.fixedWidthsMm,
       markWidthMm:plan.markWidthMm,
       totalWidthMm:plan.totalWidthMm,
@@ -104,7 +106,9 @@
     try {
       const plan = window.YoklamaHelpers.paperLayout(
         values.weeks, values.signatures, values.midterm, values.final,
-        values.markMin, values.nameMax);
+        values.markMin, values.nameMax)
+        .map((page,sectionIndex)=>({...page,sectionIndex}))
+        .filter(page=>window.YoklamaHelpers.hasOpenWeek(page.groups,values.startWeek));
       selectedSection = Math.min(selectedSection,plan.length-1);
       selector.replaceChildren(...plan.map((page,i) => {
         const label = `Bölüm ${i+1}/${plan.length} · ${page.start}–${page.end}. haftalar`;
@@ -114,7 +118,7 @@
       prev.disabled = selectedSection <= 0;
       next.disabled = selectedSection >= plan.length-1;
       const segment = plan[selectedSection];
-      const simulated = toSheet(values,segment,selectedSection);
+      const simulated = toSheet(values,segment,segment.sectionIndex);
       if (typeof window.YoklamaPrintPage !== 'function')
         throw new Error('Önizleme çizim motoru bulunamadı. Sayfayı yenileyin.');
       sheetView = window.YoklamaPrintPage(simulated,sampleRows,1,1,values.signatures);
@@ -147,7 +151,7 @@
       syncExpanded();
     }
   });
-  for (const id of ['week-count','signature-select','midterm-week','final-week',
+  for (const id of ['week-count','signature-select','midterm-week','final-week','start-week',
       'font-family','academic-year','semester']) {
     $(`#${id}`).addEventListener('change', () => {selectedSection=0;render();});
   }
