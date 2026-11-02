@@ -92,3 +92,10 @@
 
 /* Single weekly signature: the week header replaces the numbered subheader. */
 .print-page .week-top.single-signature th{height:53.3334px;vertical-align:middle}
+
+/* v12: one exam-gray block per closed week run and A4 page.
+ * Rotating a span (instead of writing-mode) is compatible with html2canvas. */
+.print-page th.closed-week{text-decoration:line-through;color:#808080}
+.print-page td.closed-block{position:relative;font-size:var(--closed-font-px,13.33px);font-weight:800;line-height:1.25;padding:4px}
+.print-page td.closed-vertical{padding:0;font-size:var(--name-font-px,10.67px)}
+.print-page td.closed-vertical .closed-text{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-90deg);white-space:nowrap}
