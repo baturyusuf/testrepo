@@ -36,6 +36,9 @@ const single=htmlFor([
   {week:3,kind:'exam',label:'VİZE SINAVI · 3. HAFTA',span:1}
 ]);
 assert.match(single, /class="week-top single-signature"/);
+assert.match(single, /<th aria-label="Sıra numarası"><\\/th>/);
+assert.doesNotMatch(single, /<th[^>]*>SIRA<\\/th>/);
+assert.match(single, /<td class="rank">1<\\/td>/);
 assert.match(single, /<th class="week-header"\s*>1\. HAFTA<\/th>/);
 assert.match(single, /<th class="week-header"\s*>2\. HAFTA<\/th>/);
 assert.doesNotMatch(single,/İMZA/,'1 signature must not show numbered subheadings');
@@ -45,6 +48,8 @@ assert.match(single, /VİZE SINAVI/);
 for (const count of [2,3,4,5]) {
   const multi=htmlFor([{week:1,kind:'week',label:'1. HAFTA',span:count}]);
   assert.match(multi, new RegExp('class="week-header" colspan="'+count+'"'));
+  assert.match(multi, /<th rowspan="2" aria-label="Sıra numarası"><\\/th>/);
+  assert.doesNotMatch(multi, /<th[^>]*>SIRA<\\/th>/);
   assert.match(multi,/class="week-sub"/);
   for(let i=1;i<=count;i++) assert(multi.includes(i+'. İMZA'));
 }
