@@ -1,4 +1,4 @@
-"""Issue #5: reference borders only on first generated worksheet.
+"""v16: approved border layout and blank serial heading on every generated worksheet.
 
 Approved source sample: 123-Yoklama-dogru.xlsx (sheet one).
 Wrong source: 123-Yoklama-yanlis.xlsx.  The source examples are not committed.
@@ -49,53 +49,68 @@ def identical_sheet(ws,reference):
         for field in ('font','fill','border','alignment','protection'):
             assert copy(getattr(cell,field))==copy(getattr(prev,field)),(position,field)
 
-def verify(weeks,signatures,midterm,final,start,student_count):
+def verify(weeks, signatures, midterm, final, start, student_count):
+    """Compare all sheets with v14 for geometry and check v15 borders everywhere."""
     students=[(str(2026000+i),'SENTETİK ÖĞRENCİ '+str(i)) for i in range(student_count)]
     args=(students,'BÖLÜM','DERS','HOCA','BAŞLIK',
           weeks,signatures,midterm,final,15,8,'Arial',58,start)
     with TemporaryDirectory() as d:
-        a,b=Path(d)/'old.xlsx',Path(d)/'new.xlsx'
-        for module,path in ((old,a),(new,b)):
+        before,after=Path(d)/'v14.xlsx',Path(d)/'v16.xlsx'
+        for module,path in ((old,before),(new,after)):
             wb,_,_=module.build_workbook(*args);wb.save(path);wb.close()
-        original,current=(load_workbook(p) for p in (a,b))
-        assert original.sheetnames==current.sheetnames
-        assert len(original.worksheets)==len(current.worksheets)
-        # This is the user-specified guardrail: sheet 2 onward is untouched.
-        for ws,previous in zip(current.worksheets[1:],original.worksheets[1:]):
-            identical_sheet(ws,previous)
-        ws=current.worksheets[0]
-        previous=original.worksheets[0]
-        assert set(map(str,ws.merged_cells.ranges))==set(map(str,previous.merged_cells.ranges))
-        assert ws.print_area==previous.print_area
-        assert ws.print_title_rows=='$1:$6'
-        assert len(ws.row_breaks.brk)==len(previous.row_breaks.brk)
-        last_col,last_row=ws.max_column,ws.max_row
-        black_side(ws['A1'],'left','medium')
-        black_side(ws['A1'],'top','medium')
-        black_side(ws['B1'],'top','medium')
-        black_side(ws.cell(1,last_col),'right','medium')
-        black_side(ws['A2'],'left','medium')
-        black_side(ws['A5'],'left','thin')
-        black_side(ws['A5'],'top','thin')
-        black_side(ws['B2'],'bottom','thin')
-        black_side(ws.cell(6,last_col),'right','thin')
-        black_side(ws['A7'],'left','medium')
-        black_side(ws.cell(7,last_col),'right','medium')
-        black_side(ws.cell(last_row,3),'bottom','medium')
-        black_side(ws.cell(last_row,last_col),'bottom','medium')
-        if last_col>5 and last_row>8:
-            assert copy(ws['D8'].border)==copy(previous['D8'].border)
-            assert copy(ws['B8'].border)==copy(previous['B8'].border)
-        assert ws['A5'].value=='SIRA'  # This label is inadvertently blank in reference.
-        for after,before in zip(current.worksheets,original.worksheets):
-            assert set(after._cells)==set(before._cells)
-            for location,c in before._cells.items():
-                value=after._cells[location]
-                assert c.value==value.value
-                assert copy(c.font)==copy(value.font)
-                assert copy(c.fill)==copy(value.fill)
-                assert copy(c.alignment)==copy(value.alignment)
-        original.close();current.close()
+        w_old,w_new=load_workbook(before),load_workbook(after)
+        assert w_old.sheetnames==w_new.sheetnames
+        assert len(w_old.worksheets)==len(w_new.worksheets)
+        for ws,original in zip(w_new.worksheets,w_old.worksheets):
+            assert ws.print_area==original.print_area
+            assert ws.print_title_rows==original.print_title_rows=='$1:$6'
+            assert ws.page_setup.orientation==original.page_setup.orientation=='landscape'
+            assert ws.page_setup.fitToWidth==original.page_setup.fitToWidth==1
+            assert ws.page_setup.paperSize==original.page_setup.paperSize
+            assert len(ws.row_breaks.brk)==len(original.row_breaks.brk)
+            assert set(map(str,ws.merged_cells.ranges))==set(
+                map(str,original.merged_cells.ranges))
+            assert set(ws.row_dimensions)==set(original.row_dimensions)
+            assert set(ws.column_dimensions)==set(original.column_dimensions)
+            for r in ws.row_dimensions:
+                assert ws.row_dimensions[r].height==original.row_dimensions[r].height
+            for col in ws.column_dimensions:
+                assert ws.column_dimensions[col].width==original.column_dimensions[col].width
+            assert set(ws._cells)==set(original._cells)
+            for key,cell in ws._cells.items():
+                prior=original._cells[key]
+                assert cell.value==(None if key==(5,1) else prior.value)
+                for field in ('font','fill','alignment','protection'):
+                    assert copy(getattr(cell,field))==copy(getattr(prior,field)),(
+                        ws.title,key,field)
+                assert cell.number_format==prior.number_format
+
+            assert ws['A5'].value is None
+            assert ws['B5'].value=='ÖĞRENCİ NO'
+            assert ws['C5'].value=='AD SOYAD'
+            assert any(str(m)=='A5:A6' for m in ws.merged_cells.ranges)
+            assert ws['A7'].value==1
+            assert copy(ws['A5'].fill)==copy(original['A5'].fill)
+            last_col,last_row=ws.max_column,ws.max_row
+            black_side(ws['A1'],'left','medium')
+            black_side(ws['A1'],'top','medium')
+            black_side(ws.cell(1,last_col),'right','medium')
+            black_side(ws['B1'],'top','medium')
+            black_side(ws['A2'],'left','medium')
+            black_side(ws['A5'],'left','thin')
+            black_side(ws['A5'],'top','thin')
+            black_side(ws['B2'],'bottom','thin')
+            black_side(ws.cell(6,last_col),'right','thin')
+            black_side(ws['A7'],'left','medium')
+            black_side(ws.cell(7,last_col),'right','medium')
+            black_side(ws.cell(last_row,3),'bottom','medium')
+            black_side(ws.cell(last_row,last_col),'bottom','medium')
+            if last_col>5 and last_row>8:
+                assert copy(ws['D8'].border)==copy(original['D8'].border)
+                assert copy(ws['B8'].border)==copy(original['B8'].border)
+        count=len(w_new.worksheets)
+        w_old.close();w_new.close()
+        return count
 
 if __name__=='__main__':
     trials=0
@@ -107,4 +122,4 @@ if __name__=='__main__':
             for n in (4,40,105):
                 verify(weeks,signatures,midterm,final,start,n)
                 trials+=1
-    print('Issue #5 border layout and sheet-two preservation:',trials,'cases passed')
+    print('v16 all-sheet approved borders and blank SIRA heading:',trials,'cases passed')
