@@ -184,3 +184,19 @@ hücre stilleri eski v14 sürümüyle aynı bırakılır.** Bu şart
 `tests/test_border_layout.py` dosyasında sentetik 4, 40 ve 105
 öğrencilik örneklerle doğrulanır. Referans dosyada yanlışlıkla
 silinmiş görünen `SIRA` etiketini koruruz; yalnızca kenarlıklar hedeflenir.
+
+## v16 — Onaylı çerçeve tüm Excel sayfalarında; sıra başlığı boş
+
+v15'te yalnızca ilk çalışma sayfasına uygulanan referans kenarlık/çerçeve
+düzeni artık **üretilen bütün sheet'lerde** kullanılır. Her sayfanın
+`A5:A6` birleşik hücresindeki görünür `SIRA` başlığı kaldırılmıştır.
+**A sütunu ve sıra numaraları korunur** (A7'den itibaren 1, 2, 3…);
+başlık hücresinin bordo dolgu ve genişliği aynıdır. PDF ve A4 canlı
+önizlemesinde de görünür `SIRA` başlığı boş bırakılır, ancak erişilebilir
+`aria-label` korunur.
+
+Bu sürümde imza/sınav haftası planlaması, kapalı hafta sütunları, Excel
+baskı alanları, 17 öğrenci/sayfa ve PDF raster kalitesi değişmemiştir.
+Regresyon testleri örnek öğrenci verileriyle **her worksheet** üzerinde
+çerçeve, başlık boşluğu, hücre birleşimleri, öğrenci numaralandırması
+ve baskı geometrisini doğrular.
