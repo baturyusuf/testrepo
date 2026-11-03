@@ -1,7 +1,7 @@
 name: Validate yoklama layout
 on:
   push:
-    branches: [gh-pages, preview-layout-v9, preview-sliders-v10, single-signature-header-v11, start-week-v12, compact-closed-weeks-v13]
+    branches: [gh-pages, preview-layout-v9, preview-sliders-v10, single-signature-header-v11, start-week-v12, compact-closed-weeks-v13, pdf-print-fidelity-v14]
   workflow_dispatch:
 jobs:
   verify:
@@ -31,6 +31,7 @@ jobs:
           node tests/test_start_week.cjs
           node tests/test_v11_baseline.cjs
           node tests/test_compact_weeks.cjs
+          node tests/test_pdf_fidelity.cjs
       - name: Python Excel regressions
         run: |
           python -m py_compile adaptive_layout.py web_bridge.py yoklama_olustur.py

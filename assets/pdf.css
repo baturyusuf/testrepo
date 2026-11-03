@@ -99,3 +99,90 @@
 .print-page td.closed-block{position:relative;font-size:var(--closed-font-px,13.33px);font-weight:800;line-height:1.25;padding:4px}
 .print-page td.closed-vertical{padding:0;font-size:var(--name-font-px,10.67px)}
 .print-page td.closed-vertical .closed-text{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-90deg);white-space:nowrap}
+
+/* v14 print fidelity: mirror adaptive_layout.py's exact Excel palette.
+ * CSS borders use the workbook's light thin lines rather than black ink.
+ * Shared by the live A4 preview and the lossless high-resolution PDF render. */
+.print-page{
+  --excel-burgundy:#9B0D22;
+  --excel-pale:#F7E6E9;
+  --excel-gray:#F0F1F3;
+  --excel-exam-gray:#D3D4DA;
+  --excel-white:#FFFFFF;
+  --excel-text:#24202A;
+  --excel-line:#A6A6AD;
+  --excel-closed:#808080;
+  --excel-closed-on-burgundy:#D9D9D9;
+  color:var(--excel-text);
+  -webkit-print-color-adjust:exact;
+  print-color-adjust:exact;
+}
+.print-page .print-head{
+  background:var(--excel-burgundy);
+  color:var(--excel-white);
+  border:.75px solid var(--excel-line);
+  font-weight:700;
+}
+.print-page .print-meta{border:.75px solid var(--excel-line);border-top:0}
+.print-page .meta-cell{border-right:.75px solid var(--excel-line)}
+.print-page .meta-cell strong{
+  background:var(--excel-pale);
+  color:var(--excel-text);
+  border-bottom:.75px solid var(--excel-line);
+  font-weight:700;
+}
+.print-page .print-department{
+  background:var(--excel-gray);
+  color:var(--excel-burgundy);
+  border:.75px solid var(--excel-line);
+  border-top:0;
+  font-weight:700;
+}
+.print-page table{border:.75px solid var(--excel-line)}
+.print-page th,.print-page td{border:.75px solid var(--excel-line)}
+.print-page .week-top th{
+  background:var(--excel-burgundy);
+  color:var(--excel-white);
+  font-weight:700;
+}
+.print-page .week-header{border-bottom:.75px solid var(--excel-line)}
+.print-page .week-sub th{
+  background:var(--excel-pale);
+  color:var(--excel-text);
+  font-weight:700;
+}
+.print-page .week-top th.exam-header{
+  background:var(--excel-exam-gray);
+  color:var(--excel-text);
+}
+.print-page .exam-cell{
+  background:var(--excel-exam-gray);
+  color:var(--excel-text);
+  border-left:.75px solid var(--excel-line);
+  border-right:.75px solid var(--excel-line);
+}
+.print-page .student-row:nth-child(even) td:not(.exam-cell){background:var(--excel-gray)}
+.print-page .student-row:nth-child(odd) td:not(.exam-cell){background:var(--excel-white)}
+.print-page td.num,.print-page td.rank{font-weight:400}
+.print-page td.name{font-weight:700}
+.print-page .week-top th.closed-week{
+  color:var(--excel-closed-on-burgundy);
+  text-decoration:line-through;
+}
+.print-page .week-sub th.closed-week{
+  color:var(--excel-closed);
+  text-decoration:line-through;
+}
+.print-page td.closed-block{font-weight:700}
+.print-page .print-meta.compact .meta-cell{border-bottom:.75px solid var(--excel-line)}
+.print-page .print-meta.compact .meta-cell strong{
+  border-bottom:0;
+  border-right:.75px solid var(--excel-line);
+}
+.print-page .page-mark{color:#74727B}
+@media print{
+  .print-page,.print-page *{
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+}
