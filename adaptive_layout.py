@@ -9,11 +9,12 @@ from __future__ import annotations
 import math
 import re
 import unicodedata
+from copy import copy
 from dataclasses import dataclass
 from pathlib import Path
 
 from openpyxl import Workbook
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.styles import Alignment, Border, Color, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.pagebreak import Break
 from openpyxl.worksheet.dimensions import ColumnDimension
@@ -272,6 +273,55 @@ def _print_setup(ws, last_column, last_row):
     ws.freeze_panes = 'D7'
 
 
+
+def _apply_reference_first_sheet_borders(ws, last_col, last_row):
+    """Issue #5: approved first sheet's ink-dark header and framed table.
+
+    Apply after all merges to preserve the pale interior grid and each closed
+    week block. Only the first *emitted* worksheet receives the new borders;
+    later sheets must retain their original v14 styles.
+    """
+    thin = Side(style='thin', color=Color(indexed=64))
+    medium = Side(style='medium', color=Color(indexed=64))
+    for row in range(1, HEADER_ROWS + 1):
+        for col in range(1, last_col + 1):
+            cell = ws.cell(row, col)
+            edge = copy(cell.border)
+            edge.left = medium if col == 1 and row <= 4 else thin
+            edge.right = medium if col == last_col and row <= 4 else thin
+            edge.top = medium if row == 1 else thin
+            edge.bottom = None if row == 4 else thin
+            cell.border = edge
+
+    for row in range(HEADER_ROWS + 1, last_row + 1):
+        for col in range(1, last_col + 1):
+            if row != last_row and col not in (1, last_col):
+                continue
+            cell = ws.cell(row, col)
+            edge = copy(cell.border)
+            if col == 1:
+                edge.left = medium
+            if col == last_col:
+                edge.right = medium
+            if row == last_row:
+                edge.bottom = medium
+            cell.border = edge
+
+    # openpyxl reconstructs merged edges from the top-left anchor on reload.
+    # Set the frame on that anchor as well; otherwise e.g. A1:U1 can revert
+    # to a thin right border even if U1 was assigned a medium side.
+    for merged in ws.merged_cells.ranges:
+        if merged.max_col != last_col and merged.max_row != last_row:
+            continue
+        anchor = ws.cell(merged.min_row, merged.min_col)
+        edge = copy(anchor.border)
+        if merged.max_col == last_col:
+            edge.right = medium if merged.min_row <= 4 or merged.max_row > HEADER_ROWS else thin
+        if merged.max_row == last_row:
+            edge.bottom = medium
+        anchor.border = edge
+
+
 def _safe_text(text):
     # Avoid Excel treating student-supplied values beginning '=' as formulas.
     value = str(text or '')
@@ -465,6 +515,8 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
                 ws.merge_cells(start_row=top,start_column=first,
                                end_row=top+STUDENTS_PER_PAGE-1,end_column=last)
         _print_setup(ws,last_col,last_row)
+        if not layouts:
+            _apply_reference_first_sheet_borders(ws, last_col, last_row)
         pages=[]
         for page in range(physical_pages):
             page_rows=[]
