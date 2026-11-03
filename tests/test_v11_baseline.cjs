@@ -25,7 +25,9 @@ for(const groups of [
   const sheet={groups,name:'01',title:'YOKLAMA',course:'D',instructor:'H',department:'B',
                fixedWidthsMm:[7.5,21,58],markWidthMm:15,fontSizePt:8,fontFamily:'Arial'};
   const original=renderOld(sheet,rows,1,1,groups.length).innerHTML;
-  assert.equal(renderNew({...sheet,startWeek:1},rows,1,1,groups.length).innerHTML,original);
-  assert.equal(renderNew(sheet,rows,1,1,groups.length).innerHTML,original);
+  const expected = original.replace('>SIRA</th>',' aria-label="Sıra numarası"></th>');
+  assert.notEqual(expected,original);
+  assert.equal(renderNew({...sheet,startWeek:1},rows,1,1,groups.length).innerHTML,expected);
+  assert.equal(renderNew(sheet,rows,1,1,groups.length).innerHTML,expected);
 }
-console.log('v11 → v12 first-week PDF/preview HTML: identical');
+console.log('v11 → v16: HTML identical except blank SIRA header');
