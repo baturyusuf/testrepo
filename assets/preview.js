@@ -106,7 +106,7 @@
     try {
       const plan = window.YoklamaHelpers.paperLayout(
         values.weeks, values.signatures, values.midterm, values.final,
-        values.markMin, values.nameMax)
+        values.markMin, values.nameMax, values.startWeek)
         .map((page,sectionIndex)=>({...page,sectionIndex}))
         .filter(page=>window.YoklamaHelpers.hasOpenWeek(page.groups,values.startWeek));
       selectedSection = Math.min(selectedSection,plan.length-1);
@@ -124,7 +124,7 @@
       sheetView = window.YoklamaPrintPage(simulated,sampleRows,1,1,values.signatures);
       canvas.replaceChildren(sheetView);
       fitPage();
-      measures.textContent = `Bölüm ${selectedSection+1}/${plan.length} · ${segment.start}–${segment.end}. haftalar · ${segment.columns} imza/sınav sütunu · Hücre ${segment.markWidthMm.toFixed(1)} mm · Ad Soyad ${values.nameMax} mm`;
+      measures.textContent = `Bölüm ${selectedSection+1}/${plan.length} · ${segment.start}–${segment.end}. haftalar · ${segment.closedColumns || 0} dar kapalı hafta · ${segment.columns} toplam sütun · Aktif hücre ${segment.markWidthMm.toFixed(1)} mm · Ad Soyad ${values.nameMax} mm`;
       viewport.classList.remove('a4-preview-error');
     } catch (error) {
       sheetView = null;

@@ -92,7 +92,7 @@
   function updatePlanPreview() {
     const node = $('#layout-preview');
     try {
-      const plan = helpers.paperLayout(weekCount(),signatureCount(),midtermWeek(),finalWeek(),minMarkWidth(),nameMaxWidth())
+      const plan = helpers.paperLayout(weekCount(),signatureCount(),midtermWeek(),finalWeek(),minMarkWidth(),nameMaxWidth(),startWeek())
         .filter(page=>helpers.hasOpenWeek(page.groups,startWeek()));
       const minWidth = Math.min(...plan.map(p=>p.minWidthMm));
       node.textContent = `A4 yatay: tahmini ${plan.length} bölüm · imza alanı ≥ ${minMarkWidth()} mm · ad soyad ≤ ${nameMaxWidth()} mm · yazı ${fontSizePt()} pt · en fazla 17 öğrenci/sayfa`;
@@ -245,8 +245,9 @@
     const printableMm = sheet.printableWidthMm || 289;
     const fixed = sheet.fixedWidthsMm || [7.5,21,58];
     const markWidth = sheet.markWidthMm || 15;
-    const sheetWidthMm = fixed.reduce((n,v)=>n+v,0) + numericCols * markWidth;
-    const colWidths = [...fixed, ...Array(numericCols).fill(markWidth)];
+    const sheetWidthMm = fixed.reduce((n,v)=>n+v,0) +
+      groups.reduce((n,g)=>n+g.span*(g.widthMm || markWidth),0);
+    const colWidths = [...fixed, ...groups.flatMap(g=>Array(g.span).fill(g.widthMm || markWidth))];
     const compactMeta = typeof sheet.compactMeta === 'boolean'
       ? sheet.compactMeta
       : (sheetWidthMm < 160 || !colWidths.slice(0,-1).some((_,i) => {
@@ -281,7 +282,8 @@
       return column + group.span;
     },0);
     const closedCell = run => {
-      const vertical = run.span * markWidth < 32;
+      const vertical = colWidths.slice(3+run.first,3+run.first+run.span)
+        .reduce((sum,mm)=>sum+mm,0) < 32;
       const label = `${firstOpenWeek}. HAFTADAN ÖNCEKİ HAFTALAR${vertical?' ':'<br>'}BU LİSTEDE İMZALANMAZ`;
       return `<td class="exam-cell closed-block${vertical?' closed-vertical':''}" colspan="${run.span}" rowspan="${rows.length}"><span class="closed-text">${label}</span></td>`;
     };

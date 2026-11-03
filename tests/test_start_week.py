@@ -50,16 +50,24 @@ def verify(config,n):
         for start in range(2,layout.last_signature_week(weeks,midterm,final)+1):
             output=root/'modified.xlsx'
             sections=workbook(output,config,n,start)
-            kept=[(i,s) for i,s in enumerate(all_sections) if
-                  any(g['kind']=='week' and g['week']>=start for g in s['groups'])]
-            assert [s['name'] for s in sections]==[s['name'] for _,s in kept]
+            packed=layout.page_plan(weeks,signatures,midterm,final,config[-1],
+                                    (7.5,21,layout.estimated_name_width_mm(students(n),
+                                     8,58,'Arial')),start)
+            kept=[part for part in packed if layout.has_open_week(part,start)]
+            assert [s['name'] for s in sections]==[
+                layout._name_for_sheet(part,i)
+                for i,part in enumerate(packed,1) if layout.has_open_week(part,start)]
             assert len(sections)==len(kept)>=1
             opened=load_workbook(output)
             assert len(opened.worksheets)==len(kept)
-            for index,(ws,section,(base_index,base)) in enumerate(zip(opened.worksheets,sections,kept)):
-                assert print_config(output,index)==print_config(original,base_index)
-                assert section['markWidthMm']==base['markWidthMm']
-                assert section['startWeek']==start and section['totalSections']==len(all_sections)
+            for index,(ws,section,part) in enumerate(zip(opened.worksheets,sections,kept)):
+                assert ws.page_setup.orientation=='landscape'
+                assert ws.page_setup.fitToWidth==1
+                assert ws.row_dimensions[7].height==layout.STUDENT_HEIGHT_PT
+                assert len(ws.row_breaks.brk)==len(section['pages'])-1
+                assert section['markWidthMm']>=config[-1]-0.001
+                assert section['startWeek']==start and section['totalSections']==len(packed)
+                assert [g['week'] for g in section['groups']]==[g.week for g in part]
                 blocks=sorted((r.min_col,r.max_col,r.min_row,r.max_row) for r in ws.merged_cells.ranges
                               if r.min_row>layout.HEADER_ROWS)
                 expected=[]
@@ -71,12 +79,16 @@ def verify(config,n):
                         assert ws.cell(7,col).value is None
                         assert not ws.cell(5,col).font.strike
                     if closed:
+                        assert g['span']==1
                         if expected and expected[-1][1]+1==col:
                             expected[-1][1]=col+g['span']-1
                         else:
                             expected.append([col,col+g['span']-1])
                         if g['span']>1:
                             assert all(ws.cell(6,col+k).font.strike for k in range(g['span']))
+                    from openpyxl.utils import get_column_letter
+                    actual_mm = layout.CLOSED_WIDTH_MM if closed else section['markWidthMm']
+                    assert ws.column_dimensions[get_column_letter(col)].width == layout.mm_to_excel_chars(actual_mm)
                     col+=g['span']
                 wanted=sorted((a,b,7+page*17,7+page*17+16)
                               for a,b in expected for page in range(len(section['pages'])))
@@ -86,7 +98,7 @@ def verify(config,n):
                     assert c.value.startswith(str(start)+'. HAFTADAN ÖNCEKİ HAFTALAR')
                     assert c.value.endswith('BU LİSTEDE İMZALANMAZ')
                     assert c.fill.fgColor.rgb.endswith(layout.EXAM_GRAY)
-                    assert c.alignment.textRotation==(90 if (b-a+1)*section['markWidthMm']<32 else 0)
+                    assert c.alignment.textRotation==(90 if (b-a+1)*layout.CLOSED_WIDTH_MM<32 else 0)
                 assert ws.cell(7,1).value==1
                 assert ws.cell(7,3).value=='ÖĞRENCİ 0'
             opened.close()

@@ -54,6 +54,7 @@ LIGHT_LINE = "A6A6AD"
 CLOSED_TEXT = "808080"
 CLOSED_TEXT_ON_BURGUNDY = "D9D9D9"
 CLOSED_VERTICAL_BELOW_MM = 32.0
+CLOSED_WIDTH_MM = 9.0  # Narrow physical mm width for each completed week
 
 
 @dataclass(frozen=True)
@@ -78,7 +79,7 @@ def validate_settings(weeks, signatures, midterm, final):
     return weeks, signatures, midterm, final
 
 
-def groups_for_weeks(weeks, signatures, midterm, final):
+def groups_for_weeks(weeks, signatures, midterm, final, start_week=1):
     groups = []
     for week in range(1, weeks + 1):
         if week == midterm:
@@ -86,7 +87,7 @@ def groups_for_weeks(weeks, signatures, midterm, final):
         elif week == final:
             groups.append(Group(week, 'exam', f'FİNAL SINAVI · {week}. HAFTA', 1))
         else:
-            groups.append(Group(week, 'week', f'{week}. HAFTA', signatures))
+            groups.append(Group(week, 'week', f'{week}. HAFTA', 1 if week < start_week else signatures))
     return groups
 
 
@@ -194,31 +195,39 @@ def fitted_name_font_pt(name, width_mm, requested_pt, font_family='Aptos'):
     return 6
 
 
-def page_plan(weeks, signatures, midterm, final, min_mark_mm=MARK_MIN_MM, fixed_widths_mm=FIXED_MM):
-    """Group full weeks into A4 landscape sheets with a physical minimum cell width."""
+def page_plan(weeks, signatures, midterm, final, min_mark_mm=MARK_MIN_MM,
+              fixed_widths_mm=FIXED_MM, start_week=1):
+    """A4 packing with narrow completed weeks and full-width active marks."""
     weeks, signatures, midterm, final = validate_settings(weeks, signatures, midterm, final)
+    start_week = validate_start_week(start_week, weeks, midterm, final)
     if not math.isfinite(min_mark_mm) or not 8 <= min_mark_mm <= 20:
         raise ValueError('Asgari imza genişliği 8–20 mm olmalıdır')
     available = PRINTABLE_MM - sum(fixed_widths_mm)
     if available <= 0:
         raise ValueError('Sütunlara ayrılan alan A4 genişliğini aşıyor')
-    all_groups = groups_for_weeks(weeks, signatures, midterm, final)
-    # Dynamic programming: minimize A4 sections first, then balance their
-    # signature-column counts. A greedy fill strands tiny, unreadable last pages.
+    all_groups = groups_for_weeks(weeks, signatures, midterm, final, start_week)
+    # Original fewest-sections-then-balance optimization, now in physical mm.
+    # start_week=1 follows precisely the existing v12 planner.
     n = len(all_groups)
     dp = [None] * (n + 1)
     dp[n] = (0, 0, [])
     for start in range(n - 1, -1, -1):
-        used = 0
+        active, closed = 0, 0
         best = None
         for end in range(start + 1, n + 1):
-            used += all_groups[end - 1].span
-            if used * min_mark_mm > available + 1e-9:
+            group = all_groups[end - 1]
+            if is_closed(group, start_week):
+                closed += 1
+            else:
+                active += group.span
+            occupied = active * min_mark_mm + closed * CLOSED_WIDTH_MM
+            if occupied > available + 1e-9:
                 break
             remaining = dp[end]
             if remaining is None:
                 continue
-            candidate = (remaining[0] + 1, remaining[1] + used ** 2,
+            weight = active + closed * CLOSED_WIDTH_MM / min_mark_mm
+            candidate = (remaining[0] + 1, remaining[1] + weight ** 2,
                          [all_groups[start:end]] + remaining[2])
             if best is None or candidate[:2] < best[:2]:
                 best = candidate
@@ -227,17 +236,19 @@ def page_plan(weeks, signatures, midterm, final, min_mark_mm=MARK_MIN_MM, fixed_
         raise ValueError('Geçerli bir A4 sayfa planı oluşturulamadı')
     return dp[0][2]
 
+
 def mm_to_excel_chars(mm):
     """Calibri/Aptos Narrow column conversion at nominal 96 dpi (7px/char)."""
     return round((mm * 96 / 25.4 - 5) / 7, 2)
 
 
-def mark_width_mm(groups, min_mark_mm=MARK_MIN_MM, fixed_widths_mm=FIXED_MM):
-    count = sum(g.span for g in groups)
-    if not count:
-        raise ValueError('Çıktı sayfası boş olamaz')
-    available = PRINTABLE_MM - sum(fixed_widths_mm)
-    value = min(max(MARK_MAX_MM, min_mark_mm), available / count)
+def mark_width_mm(groups, min_mark_mm=MARK_MIN_MM, fixed_widths_mm=FIXED_MM, start_week=1):
+    active = sum(g.span for g in groups if not is_closed(g, start_week))
+    closed = sum(g.span for g in groups if is_closed(g, start_week))
+    if not active:
+        raise ValueError('İmza atılacak hafta bulunamadı')
+    available = PRINTABLE_MM - sum(fixed_widths_mm) - closed * CLOSED_WIDTH_MM
+    value = min(max(MARK_MAX_MM, min_mark_mm), available / active)
     if value + 1e-7 < min_mark_mm:
         raise ValueError('İmza hücresi için yeterli genişlik yok')
     return round(value, 4)
@@ -288,8 +299,9 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
         raise ValueError('Listede öğrenci yok')
     name_width = estimated_name_width_mm(students, font_size_pt, name_max_mm, font_family)
     fixed_widths = (SERIAL_WIDTH_MM, STUDENT_NUMBER_WIDTH_MM, name_width)
-    segments = page_plan(weeks, signatures, midterm, final, min_mark_mm, fixed_widths)
     start_week = validate_start_week(start_week, weeks, midterm, final)
+    segments = page_plan(weeks, signatures, midterm, final, min_mark_mm,
+                         fixed_widths, start_week)
     # Old size is now 2 pt smaller by default. All text groups follow the slider.
     size_offset = font_size_pt - 10
     def font_pt(previous, lower=6):
@@ -310,14 +322,18 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
         if not has_open_week(groups, start_week):
             continue
         ws = wb.create_sheet(_name_for_sheet(groups, i))
-        width = mark_width_mm(groups, min_mark_mm, fixed_widths)
+        width = mark_width_mm(groups, min_mark_mm, fixed_widths, start_week)
         total_marks = sum(g.span for g in groups)
         last_col = 3 + total_marks
         last_letter = get_column_letter(last_col)
         for col, mm in enumerate(fixed_widths, 1):
             ws.column_dimensions[get_column_letter(col)].width = mm_to_excel_chars(mm)
-        for col in range(4, last_col + 1):
-            ws.column_dimensions[get_column_letter(col)].width = mm_to_excel_chars(width)
+        col = 4
+        for group in groups:
+            mm = CLOSED_WIDTH_MM if is_closed(group, start_week) else width
+            for offset in range(group.span):
+                ws.column_dimensions[get_column_letter(col + offset)].width = mm_to_excel_chars(mm)
+            col += group.span
         for row, height in enumerate((27, 18, 24, 22, 23, 17), start=1):
             ws.row_dimensions[row].height = height
         ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=last_col)
@@ -327,7 +343,10 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
         c.alignment = Alignment(horizontal='center', vertical='center', shrink_to_fit=True)
         # Physical-width-based metadata layout. Two equal-ish blocks are used only
         # when each has room for its label; otherwise use two full-width rows.
-        physical_columns = list(fixed_widths) + [width] * total_marks
+        physical_columns = list(fixed_widths) + [
+            CLOSED_WIDTH_MM if is_closed(g, start_week) else width
+            for g in groups for _ in range(g.span)
+        ]
         table_mm = sum(physical_columns)
         cutoffs = []
         for candidate_cut in range(1, last_col):
@@ -412,7 +431,8 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
                 x.border=Border(left=hairline,right=hairline,bottom=hairline)
             if g.kind == 'exam':
                 exam_columns.append(start)
-            pdf_groups.append({'week':g.week,'kind':g.kind,'label':g.label,'span':g.span})
+            pdf_groups.append({'week':g.week,'kind':g.kind,'label':g.label,
+                               'span':g.span, 'widthMm':CLOSED_WIDTH_MM if closed else width})
             mark_col=end+1
         for row in range(HEADER_ROWS+1,last_row+1):
             ws.row_dimensions[row].height=STUDENT_HEIGHT_PT
@@ -432,7 +452,7 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
         # One merged block per closed run and per physical A4 page, including empty rows.
         # The planner and the original row/column dimensions are never recalculated.
         for first,last in closed_runs(groups,start_week):
-            vertical=(last-first+1)*width<CLOSED_VERTICAL_BELOW_MM
+            vertical=(last-first+1)*CLOSED_WIDTH_MM<CLOSED_VERTICAL_BELOW_MM
             for page in range(physical_pages):
                 top=HEADER_ROWS+1+page*STUDENTS_PER_PAGE
                 c=ws.cell(top,first,closed_label(start_week,vertical))
@@ -457,12 +477,12 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
         layouts.append({
             'name':ws.title,'title':title,'course':course,'instructor':instructor,
             'department':department,'groups':pdf_groups,'pages':pages,
-            'capacity':STUDENTS_PER_PAGE,'markWidthMm':width,
+            'capacity':STUDENTS_PER_PAGE,'markWidthMm':width,'closedWidthMm':CLOSED_WIDTH_MM,
             'fixedWidthsMm':list(fixed_widths),'rowHeightPt':STUDENT_HEIGHT_PT,
             'minMarkWidthMm':min_mark_mm,'nameMaxWidthMm':name_max_mm,
             'fontSizePt':font_size_pt,'fontFamily':font_family,
             'compactMeta':compact_meta,
-            'printableWidthMm':PRINTABLE_MM,'totalWidthMm':round(sum(fixed_widths)+total_marks*width,3),
+            'printableWidthMm':PRINTABLE_MM,'totalWidthMm':round(sum(physical_columns),3),
             'weekStart':groups[0].week,'weekEnd':groups[-1].week,
             'startWeek':start_week,'totalSections':total_segments,
         })
