@@ -274,12 +274,11 @@ def _print_setup(ws, last_column, last_row):
 
 
 
-def _apply_reference_first_sheet_borders(ws, last_col, last_row):
-    """Issue #5: approved first sheet's ink-dark header and framed table.
+def _apply_reference_sheet_borders(ws, last_col, last_row):
+    """Apply the approved v15 borders to every worksheet.
 
-    Apply after all merges to preserve the pale interior grid and each closed
-    week block. Only the first *emitted* worksheet receives the new borders;
-    later sheets must retain their original v14 styles.
+    Keep the pale interior grid and all closed-week merged blocks unchanged.
+    Apply after every cell and merge has been created.
     """
     thin = Side(style='thin', color=Color(indexed=64))
     medium = Side(style='medium', color=Color(indexed=64))
@@ -445,7 +444,7 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
         c.font=Font(name=font_family,size=font_pt(11),bold=True,color=BURGUNDY)
         c.fill=PatternFill('solid',fgColor=GRAY)
         c.alignment=Alignment(horizontal='center',vertical='center',shrink_to_fit=True)
-        for col, label in ((1,'SIRA'),(2,'ÖĞRENCİ NO'),(3,'AD SOYAD')):
+        for col, label in ((1,None),(2,'ÖĞRENCİ NO'),(3,'AD SOYAD')):
             ws.merge_cells(start_row=5,start_column=col,end_row=6,end_column=col)
             c=ws.cell(5,col,label)
             c.font=Font(name=font_family,size=font_pt(9),bold=True,color=WHITE)
@@ -515,8 +514,7 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
                 ws.merge_cells(start_row=top,start_column=first,
                                end_row=top+STUDENTS_PER_PAGE-1,end_column=last)
         _print_setup(ws,last_col,last_row)
-        if not layouts:
-            _apply_reference_first_sheet_borders(ws, last_col, last_row)
+        _apply_reference_sheet_borders(ws, last_col, last_row)
         pages=[]
         for page in range(physical_pages):
             page_rows=[]

@@ -1,4 +1,4 @@
-"""v11 comparison: preserve content/geometry; v15 changes sheet-one border styles."""
+"""v11 comparison: preserve content/geometry; v16 changes borders on all sheets and blanks the SIRA heading."""
 from copy import copy
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -39,10 +39,8 @@ for weeks,signatures,midterm,final,minimum in [
             assert set(ws._cells)==set(updated._cells)
             for address,c in ws._cells.items():
                 got=updated._cells[address]
-                assert got.value==c.value
+                assert got.value==(None if address==(5,1) else c.value)
                 for field in ('font','fill','alignment','protection'):
                     assert copy(getattr(c,field))==copy(getattr(got,field))
-                if idx:
-                    assert copy(c.border)==copy(got.border)
         before.close();after.close()
-print('v11 → v15: content, geometry and subsequent-sheet styles preserved')
+print('v11 → v16: content except header, A4 geometry and non-border styles preserved')
