@@ -352,7 +352,8 @@
         const element = makePrintPage(sheet, sheet.pages[page], page + 1, sheet.pages.length, signatures);
         stage.replaceChildren(element);
         // Wait for the chosen web font to finish loading before rasterization.
-        if (document.fonts && document.fonts.ready) await document.fonts.ready;
+        const fontReady = document.fonts && document.fonts.ready;
+        if (fontReady) await fontReady;
         await tick();
         let canvas;
         try {
