@@ -144,3 +144,28 @@ Başlangıç haftası **1** olduğunda v12 Excel XML'i ve PDF HTML'i değişmez.
 Bu davranış [PR #2 geri bildirimi](https://github.com/baturyusuf/testrepo/pull/2#issuecomment-6578850105)
 üzerine eklendi. Regresyonlar: `tests/test_compact_weeks.py`,
 `tests/test_compact_weeks.cjs`, `tests/test_compact_parity.cjs`.
+
+## PDF baskı netliği ve Excel renk uyumu (v14)
+
+PDF dışa aktarımı artık önceki JPEG %89 / 1,7× (~163 DPI) yerine
+**kayıpsız PNG / 3× (~288 DPI)** kullanır. `canvas.toBlob` ve
+`Uint8Array` bellek tüketimini sınırlamak amacıyla base64 oluşturmadan
+jsPDF'ye geçirilir. Seçilen font yüklenmeden ekran görüntüsü alınmaz;
+her A4 sayfası ayrı işlenir, canvas işi bitince bellekten bırakılır ve hata
+durumunda gizli PDF sahnesi temizlenir. PDF hâlâ görüntü tabanlıdır,
+metin seçilebilir değildir; tam vektörel PDF ayrı bir geliştirmedir.
+
+`assets/pdf.css` dosyasında tek bir `v14 print fidelity` bölümünde
+`adaptive_layout.py` renk sabitleriyle aynı değerler kullanılır
+(bordo `9B0D22`, açık pembe `F7E6E9`, satır grisi `F0F1F3`,
+sınav grisi `D3D4DA`, kenarlık `A6A6AD`). Varsayılan siyah/kalın
+çizgiler inceltildi; sıra ve numara Excel'deki gibi normal, öğrenci ismi
+kalın ağırlıkta tutuldu. Aynı CSS hem A4 önizlemede hem PDF üretiminde
+kullanılır. **Excel oluşturma, hafta planı, 9 mm kapalı sütun ve
+17 öğrenci/sayfa mantığında değişiklik yapılmadı.**
+
+Not: Yaklaşık 288 DPI PNG dosyaları, önceki JPEG çıktılardan daha
+büyük olabilir ve PDF üretimi düşük bellekli cihazlarda daha uzun
+sürebilir. Tarayıcı yazdırmasında "arka plan grafikleri" seçeneğinin
+açılması ve gerçek yazıcı baskısının manuel kontrolü önerilir.
+Gerçek öğrenci bilgileri otomatik test deposuna eklenmez.
