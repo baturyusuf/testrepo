@@ -307,6 +307,20 @@ def _apply_reference_first_sheet_borders(ws, last_col, last_row):
                 edge.bottom = medium
             cell.border = edge
 
+    # openpyxl reconstructs merged edges from the top-left anchor on reload.
+    # Set the frame on that anchor as well; otherwise e.g. A1:U1 can revert
+    # to a thin right border even if U1 was assigned a medium side.
+    for merged in ws.merged_cells.ranges:
+        if merged.max_col != last_col and merged.max_row != last_row:
+            continue
+        anchor = ws.cell(merged.min_row, merged.min_col)
+        edge = copy(anchor.border)
+        if merged.max_col == last_col:
+            edge.right = medium if merged.min_row <= 4 or merged.max_row > HEADER_ROWS else thin
+        if merged.max_row == last_row:
+            edge.bottom = medium
+        anchor.border = edge
+
 
 def _safe_text(text):
     # Avoid Excel treating student-supplied values beginning '=' as formulas.
