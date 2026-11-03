@@ -108,7 +108,7 @@ const api=new Function('window','stage','html2canvas','tick','makePrintPage','do
   assert.match(css,/\.print-page td\.num,\.print-page td\.rank\{font-weight:400\}/);
   assert.match(css,/print-color-adjust:exact/);
   assert.match(html,/assets\/pdf\.css\?v=14/);
-  assert.match(html,/assets\/app\.js\?v=14/);
+  assert.match(html,/assets\/app\.js\?v=16/);
   assert.doesNotMatch(src.slice(from,to),/image\/jpeg|toDataURL\('image\/jpeg'/i);
   console.log('v14 high-resolution PNG PDF path, canvas cleanup, Excel color parity: OK');
 })().catch(error=>{console.error(error);process.exitCode=1;});
