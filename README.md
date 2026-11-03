@@ -169,3 +169,18 @@ büyük olabilir ve PDF üretimi düşük bellekli cihazlarda daha uzun
 sürebilir. Tarayıcı yazdırmasında "arka plan grafikleri" seçeneğinin
 açılması ve gerçek yazıcı baskısının manuel kontrolü önerilir.
 Gerçek öğrenci bilgileri otomatik test deposuna eklenmez.
+
+## Issue #5 — ilk Excel sayfasındaki kenarlık düzeni (v15)
+
+Kullanıcının paylaştığı `123-Yoklama-yanlis.xlsx` ile
+`123-Yoklama-dogru.xlsx` dosyaları karşılaştırıldı; yalnızca ikinci
+dosyanın **ilk sayfasındaki** kenarlıklar referans alındı.
+İlk üretilen çalışma sayfasında 1–6. satır başlıklarının iç kenarlıkları
+Excel'in otomatik siyah ince çizgisine, dış çerçeve orta kalınlıktaki
+siyah kenarlığa dönüştürülür. Öğrenci satırlarının iç ince açık-gri
+çizgileri ve kapalı hafta birleşimleri korunur; en altta orta kalınlık
+dış kenarlık vardır. **İkinci ve sonraki çalışma sayfalarının tüm
+hücre stilleri eski v14 sürümüyle aynı bırakılır.** Bu şart
+`tests/test_border_layout.py` dosyasında sentetik 4, 40 ve 105
+öğrencilik örneklerle doğrulanır. Referans dosyada yanlışlıkla
+silinmiş görünen `SIRA` etiketini koruruz; yalnızca kenarlıklar hedeflenir.
