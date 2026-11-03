@@ -307,7 +307,7 @@
         : '').join('')
       : '';
     const studentHeaderSpan = hasNumberedSignatureHeaders ? ' rowspan="2"' : '';
-    const tableHead = `<tr class="week-top${hasNumberedSignatureHeaders ? '' : ' single-signature'}"><th${studentHeaderSpan}>SIRA</th><th${studentHeaderSpan}>NUMARA</th><th${studentHeaderSpan}>AD SOYAD</th>${firstLine}</tr>${hasNumberedSignatureHeaders ? `<tr class="week-sub">${secondLine}</tr>` : ''}`;
+    const tableHead = `<tr class="week-top${hasNumberedSignatureHeaders ? '' : ' single-signature'}"><th${studentHeaderSpan} aria-label="Sıra numarası"></th><th${studentHeaderSpan}>NUMARA</th><th${studentHeaderSpan}>AD SOYAD</th>${firstLine}</tr>${hasNumberedSignatureHeaders ? `<tr class="week-sub">${secondLine}</tr>` : ''}`;
     // Rowspan/colspan are emitted once at the first row; subsequent rows
     // skip those grid columns while leaving student data and exam cells unchanged.
     const markCells = rowIndex => {
