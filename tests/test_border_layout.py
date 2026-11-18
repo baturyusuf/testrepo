@@ -59,38 +59,52 @@ def verify(weeks, signatures, midterm, final, start, student_count):
         for module,path in ((old,before),(new,after)):
             wb,_,_=module.build_workbook(*args);wb.save(path);wb.close()
         w_old,w_new=load_workbook(before),load_workbook(after)
-        assert w_old.sheetnames==w_new.sheetnames
-        assert len(w_old.worksheets)==len(w_new.worksheets)
-        for ws,original in zip(w_new.worksheets,w_old.worksheets):
-            assert ws.print_area==original.print_area
-            assert ws.print_title_rows==original.print_title_rows=='$1:$6'
-            assert ws.page_setup.orientation==original.page_setup.orientation=='landscape'
-            assert ws.page_setup.fitToWidth==original.page_setup.fitToWidth==1
-            assert ws.page_setup.paperSize==original.page_setup.paperSize
-            assert len(ws.row_breaks.brk)==len(original.row_breaks.brk)
-            assert set(map(str,ws.merged_cells.ranges))==set(
-                map(str,original.merged_cells.ranges))
-            assert set(ws.row_dimensions)==set(original.row_dimensions)
-            assert set(ws.column_dimensions)==set(original.column_dimensions)
-            for r in ws.row_dimensions:
-                assert ws.row_dimensions[r].height==original.row_dimensions[r].height
-            for col in ws.column_dimensions:
-                assert ws.column_dimensions[col].width==original.column_dimensions[col].width
-            assert set(ws._cells)==set(original._cells)
-            for key,cell in ws._cells.items():
-                prior=original._cells[key]
-                assert cell.value==(None if key==(5,1) else prior.value)
-                for field in ('font','fill','alignment','protection'):
-                    assert copy(getattr(cell,field))==copy(getattr(prior,field)),(
-                        ws.title,key,field)
-                assert cell.number_format==prior.number_format
+        # Issue #8 intentionally changes sheet geometry when a 4+ week run is folded.
+        compact_case=any(g.kind=='closed'
+            for part in new.page_plan(weeks,signatures,midterm,final,15,
+               (new.SERIAL_WIDTH_MM,new.STUDENT_NUMBER_WIDTH_MM,
+                new.estimated_name_width_mm(students,8,58,'Arial')),start)
+            for g in part)
+        if not compact_case:
+            assert w_old.sheetnames==w_new.sheetnames
+            assert len(w_old.worksheets)==len(w_new.worksheets)
+        assert len(w_new.worksheets)>=1
+        for index,ws in enumerate(w_new.worksheets):
+            original = None if compact_case else w_old.worksheets[index]
+            assert ws.print_title_rows=='$1:$6'
+            assert ws.page_setup.orientation=='landscape'
+            assert ws.page_setup.fitToWidth==1
+            if original is not None:
+                assert ws.print_area==original.print_area
+                assert ws.print_title_rows==original.print_title_rows
+                assert ws.page_setup.orientation==original.page_setup.orientation
+                assert ws.page_setup.fitToWidth==original.page_setup.fitToWidth
+                assert ws.page_setup.paperSize==original.page_setup.paperSize
+                assert len(ws.row_breaks.brk)==len(original.row_breaks.brk)
+                assert set(map(str,ws.merged_cells.ranges))==set(
+                    map(str,original.merged_cells.ranges))
+                assert set(ws.row_dimensions)==set(original.row_dimensions)
+                assert set(ws.column_dimensions)==set(original.column_dimensions)
+                for row in ws.row_dimensions:
+                    assert ws.row_dimensions[row].height==original.row_dimensions[row].height
+                for col in ws.column_dimensions:
+                    assert ws.column_dimensions[col].width==original.column_dimensions[col].width
+                assert set(ws._cells)==set(original._cells)
+                for key,cell in ws._cells.items():
+                    prior=original._cells[key]
+                    assert cell.value==(None if key==(5,1) else prior.value)
+                    for field in ('font','fill','alignment','protection'):
+                        assert copy(getattr(cell,field))==copy(getattr(prior,field)),(
+                            ws.title,key,field)
+                    assert cell.number_format==prior.number_format
 
             assert ws['A5'].value is None
             assert ws['B5'].value=='ÖĞRENCİ NO'
             assert ws['C5'].value=='AD SOYAD'
             assert any(str(m)=='A5:A6' for m in ws.merged_cells.ranges)
             assert ws['A7'].value==1
-            assert copy(ws['A5'].fill)==copy(original['A5'].fill)
+            if original is not None:
+                assert copy(ws['A5'].fill)==copy(original['A5'].fill)
             last_col,last_row=ws.max_column,ws.max_row
             black_side(ws['A1'],'left','medium')
             black_side(ws['A1'],'top','medium')
@@ -106,8 +120,9 @@ def verify(weeks, signatures, midterm, final, start, student_count):
             black_side(ws.cell(last_row,3),'bottom','medium')
             black_side(ws.cell(last_row,last_col),'bottom','medium')
             if last_col>5 and last_row>8:
-                assert copy(ws['D8'].border)==copy(original['D8'].border)
-                assert copy(ws['B8'].border)==copy(original['B8'].border)
+                if original is not None:
+                    assert copy(ws['D8'].border)==copy(original['D8'].border)
+                    assert copy(ws['B8'].border)==copy(original['B8'].border)
         count=len(w_new.worksheets)
         w_old.close();w_new.close()
         return count
