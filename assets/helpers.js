@@ -42,25 +42,37 @@
     // Conservative layout preview assumes the Name column reaches its maximum.
     // Actual sheet calculation uses the longest student name, and may fit more weeks.
     const capacity = 289 - 7.5 - 21 - nameMaxWidthMm;
-    const closedWidthMm = 9;
-    const groups = Array.from({length:weeks}, (_,i) => ({
+    const closedWidthMm = 9, compactClosedWidthMm = 26;
+    const raw = Array.from({length:weeks}, (_,i) => ({
       week:i+1,
       closed:i+1<startWeek && i+1!==midterm && i+1!==final,
-      span:(i+1===midterm || i+1===final || i+1<startWeek) ? 1 : signatures
+      span:(i+1===midterm || i+1===final || i+1<startWeek) ? 1 : signatures,
+      kind:i+1===midterm || i+1===final?'exam':'week'
     }));
+    const groups=[];
+    for(let i=0;i<raw.length;){
+      if(!raw[i].closed){groups.push(raw[i++]);continue;}
+      let end=i+1;
+      while(end<raw.length && raw[end].closed)end++;
+      if(end-i>=4)groups.push({week:raw[i].week,endWeek:raw[end-1].week,
+        kind:'closed',closed:true,span:1});
+      else groups.push(...raw.slice(i,end));
+      i=end;
+    }
+    const closedMm=group=>group.kind==='closed'?compactClosedWidthMm:closedWidthMm;
     // Identical lexicographic optimization to adaptive_layout.py:
     // fewest sections, then lowest sum of squared signature-column counts.
-    const dp = Array(weeks+1).fill(null);
-    dp[weeks] = {count:0,squareSum:0,sections:[]};
-    for (let start=weeks-1;start>=0;start--) {
-      let active=0, closed=0, best=null;
-      for (let end=start+1;end<=weeks;end++) {
-        if (groups[end-1].closed) closed++;
+    const dp = Array(groups.length+1).fill(null);
+    dp[groups.length] = {count:0,squareSum:0,sections:[]};
+    for (let start=groups.length-1;start>=0;start--) {
+      let active=0, closedOccupiedMm=0, best=null;
+      for (let end=start+1;end<=groups.length;end++) {
+        if(groups[end-1].closed)closedOccupiedMm+=closedMm(groups[end-1])*groups[end-1].span;
         else active+=groups[end-1].span;
-        if (active*minWidthMm+closed*closedWidthMm > capacity+1e-9) break;
+        if(active*minWidthMm+closedOccupiedMm>capacity+1e-9)break;
         const remainder=dp[end];
         if (!remainder) continue;
-        const weight=active+closed*closedWidthMm/minWidthMm;
+        const weight=active+closedOccupiedMm/minWidthMm;
         const candidate={
           count:remainder.count+1,
           squareSum:remainder.squareSum+weight*weight,
@@ -77,24 +89,26 @@
       const columns = g.reduce((n,entry)=>n+entry.span,0);
       const closedColumns=g.reduce((n,entry)=>n+(entry.closed?1:0),0);
       const activeColumns=columns-closedColumns;
-      const markWidthMm = activeColumns
+      const closedOccupiedMm=g.reduce((n,e)=>n+(e.closed?closedMm(e)*e.span:0),0);
+      const markWidthMm=activeColumns
         ? Math.round(Math.min(Math.max(18,minWidthMm),
-            (capacity-closedColumns*closedWidthMm)/activeColumns)*10000)/10000
+            (capacity-closedOccupiedMm)/activeColumns)*10000)/10000
         : Math.max(18,minWidthMm);
       return {
-        start:g[0].week,end:g[g.length-1].week,
+        start:g[0].week,end:g[g.length-1].endWeek || g[g.length-1].week,
         columns,
         minWidthMm:markWidthMm, markWidthMm,
         fixedWidthsMm:[7.5,21,nameMaxWidthMm],
         totalWidthMm:7.5+21+nameMaxWidthMm+
-          closedColumns*closedWidthMm+activeColumns*markWidthMm,
+          closedOccupiedMm+activeColumns*markWidthMm,
         closedWidthMm,closedColumns,activeColumns,
         groups:g.map(entry=>({
-          week:entry.week,span:entry.span,
-          widthMm:entry.closed?closedWidthMm:markWidthMm,
-          kind:entry.week===midterm || entry.week===final?'exam':'week',
-          label:entry.week===midterm?`VİZE SINAVI · ${entry.week}. HAFTA`
-                :entry.week===final?`FİNAL SINAVI · ${entry.week}. HAFTA`:`${entry.week}. HAFTA`
+          week:entry.week,endWeek:entry.endWeek||entry.week,span:entry.span,
+          widthMm:entry.closed?closedMm(entry):markWidthMm,
+          kind:entry.kind,
+          label:entry.kind==='closed'?`${entry.week}-${entry.endWeek} HAFTALAR`
+            :entry.week===midterm?`VİZE SINAVI · ${entry.week}. HAFTA`
+            :entry.week===final?`FİNAL SINAVI · ${entry.week}. HAFTA`:`${entry.week}. HAFTA`
         }))
       };
     });
