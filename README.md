@@ -200,3 +200,7 @@ baskı alanları, 17 öğrenci/sayfa ve PDF raster kalitesi değişmemiştir.
 Regresyon testleri örnek öğrenci verileriyle **her worksheet** üzerinde
 çerçeve, başlık boşluğu, hücre birleşimleri, öğrenci numaralandırması
 ve baskı geometrisini doğrular.
+
+## Issue #8 — Geçmiş haftaların tek sütunda gösterilmesi
+
+En az **4 ardışık geçmiş imza haftası** tek **26 mm** gri sütunda özetlenir. Bordo başlıkta örneğin `1-7 HAFTALAR`, gri alanda yatay olarak `1-7 arasındaki haftalar bu belgede imzalanamaz` görünür. **Üç veya daha az** ardışık geçmiş hafta için 9 mm'lik ayrı sütunlar korunur. Vize/final haftaları sınav olarak ayrı sütun kaldığından **8. hafta vizeyse**, başlangıç haftası 9 için kapalı blok **1–7**, ayrıca 8. hafta vize sütunu görünür. Python Excel ve JS A4/PDF aynı fiziksel sütun ölçüleri ve sayfa planını kullanır.
