@@ -22,10 +22,10 @@ def verify(weeks,sigs,mid,final,minmark,start,n):
         for ws,sh in zip(result.worksheets,manifest):
             groups=sh['groups'];marks=0;closed=[]
             for g in groups:
-                old=(g['kind']=='week' and g['week']<start)
+                old=(g['kind']=='closed' or (g['kind']=='week' and g['week']<start))
                 if old:
                     assert g['span']==1
-                    assert g['widthMm']==a.CLOSED_WIDTH_MM
+                    assert g['widthMm']==(a.COMPACT_CLOSED_WIDTH_MM if g['kind']=='closed' else a.CLOSED_WIDTH_MM)
                 else:
                     assert g['span']==(1 if g['kind']=='exam' else sigs)
                     assert g['widthMm']==sh['markWidthMm']

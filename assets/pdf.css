@@ -186,3 +186,8 @@
     print-color-adjust:exact;
   }
 }
+
+/* Issue #8: 4+ prior signature weeks share one horizontal 26 mm column. */
+.print-page .week-top th.closed-range{color:var(--excel-white);text-decoration:none;overflow-wrap:anywhere}
+.print-page td.closed-compact{padding:3px 4px}
+.print-page td.closed-compact .closed-text{display:block;position:static;transform:none;white-space:normal;overflow-wrap:anywhere;word-break:normal;line-height:1.35;font-size:var(--name-font-px,10.67px)}

@@ -270,34 +270,40 @@
     // Contiguous closed signature columns become one gray block on each A4 page.
     // Exam columns are never part of a run.
     const firstOpenWeek = Number(sheet.startWeek || 1);
-    const isClosed = group => group.kind === 'week' && group.week < firstOpenWeek;
+    const isClosed = group => group.kind === 'closed' || (group.kind === 'week' && group.week < firstOpenWeek);
     const closedClass = group => isClosed(group) ? ' closed-week' : '';
     const closedRuns = [];
     groups.reduce((column, group) => {
       const lastRun = closedRuns[closedRuns.length-1];
       if (isClosed(group)) {
-        if (lastRun && lastRun.first + lastRun.span === column) lastRun.span += group.span;
-        else closedRuns.push({first:column,span:group.span});
+        if(lastRun && lastRun.first+lastRun.span===column){
+          lastRun.span+=group.span;
+          lastRun.lastWeek=group.endWeek||group.week;
+          lastRun.compact=lastRun.compact||group.kind==='closed';
+        }else closedRuns.push({first:column,span:group.span,firstWeek:group.week,
+          lastWeek:group.endWeek||group.week,compact:group.kind==='closed'});
       }
       return column + group.span;
     },0);
     const closedCell = run => {
-      const vertical = colWidths.slice(3+run.first,3+run.first+run.span)
-        .reduce((sum,mm)=>sum+mm,0) < 32;
-      const label = `${firstOpenWeek}. HAFTADAN ÖNCEKİ HAFTALAR${vertical?' ':'<br>'}BU LİSTEDE İMZALANMAZ`;
-      return `<td class="exam-cell closed-block${vertical?' closed-vertical':''}" colspan="${run.span}" rowspan="${rows.length}"><span class="closed-text">${label}</span></td>`;
+      const vertical=!run.compact && colWidths.slice(3+run.first,3+run.first+run.span)
+        .reduce((sum,mm)=>sum+mm,0)<32;
+      const label=run.compact
+        ?`${run.firstWeek}-${run.lastWeek} arasındaki haftalar bu belgede imzalanamaz`
+        :`${firstOpenWeek}. HAFTADAN ÖNCEKİ HAFTALAR${vertical?' ':'<br>'}BU LİSTEDE İMZALANMAZ`;
+      return `<td class="exam-cell closed-block${run.compact?' closed-compact':vertical?' closed-vertical':''}" colspan="${run.span}" rowspan="${rows.length}"><span class="closed-text">${label}</span></td>`;
     };
     el.style.setProperty('--closed-font-px',`${(fontPt*1.25*96/72).toFixed(2)}px`);
     const hasNumberedSignatureHeaders = groups.some(group =>
       group.kind === 'week' && group.span > 1);
     const firstLine = groups.map(group => {
-      if (group.kind === 'week') {
+      if (group.kind === 'week' || group.kind === 'closed') {
         // With one weekly signature, the week title IS the entire header:
         // no numbered signature subheader and no split header cell.
         const attributes = hasNumberedSignatureHeaders
           ? (group.span === 1 ? 'rowspan="2"' : `colspan="${group.span}"`)
           : '';
-        return `<th class="week-header${closedClass(group)}" ${attributes}>${html(group.label)}</th>`;
+        return `<th class="week-header${closedClass(group)}${group.kind==='closed'?' closed-range':''}" ${attributes}>${html(group.label)}</th>`;
       }
       return `<th class="exam-header" colspan="${group.span}"${hasNumberedSignatureHeaders ? ' rowspan="2"' : ''}>${html(group.label)}</th>`;
     }).join('');
