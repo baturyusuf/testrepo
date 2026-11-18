@@ -73,8 +73,8 @@ def verify(config,n):
                 expected=[]
                 col=4
                 for g in section['groups']:
-                    closed=g['kind']=='week' and g['week']<start
-                    assert bool(ws.cell(5,col).font.strike)==closed
+                    closed=(g['kind']=='closed' or (g['kind']=='week' and g['week']<start))
+                    assert bool(ws.cell(5,col).font.strike)==(closed and g['kind']=='week')
                     if g['kind']=='exam':
                         assert ws.cell(7,col).value is None
                         assert not ws.cell(5,col).font.strike
@@ -87,7 +87,8 @@ def verify(config,n):
                         if g['span']>1:
                             assert all(ws.cell(6,col+k).font.strike for k in range(g['span']))
                     from openpyxl.utils import get_column_letter
-                    actual_mm = layout.CLOSED_WIDTH_MM if closed else section['markWidthMm']
+                    actual_mm = (layout.COMPACT_CLOSED_WIDTH_MM if g['kind']=='closed' else
+                                 layout.CLOSED_WIDTH_MM if closed else section['markWidthMm'])
                     assert ws.column_dimensions[get_column_letter(col)].width == layout.mm_to_excel_chars(actual_mm)
                     col+=g['span']
                 wanted=sorted((a,b,7+page*17,7+page*17+16)
@@ -95,10 +96,16 @@ def verify(config,n):
                 assert blocks==wanted,(config,n,start,blocks,wanted)
                 for a,b,top,_ in blocks:
                     c=ws.cell(top,a)
-                    assert c.value.startswith(str(start)+'. HAFTADAN ÖNCEKİ HAFTALAR')
-                    assert c.value.endswith('BU LİSTEDE İMZALANMAZ')
+                    compact=' HAFTALAR' in str(ws.cell(5,a).value)
+                    if compact:
+                        assert 'arasındaki haftalar' in c.value
+                        assert 'bu belgede imzalanamaz' in c.value
+                        assert c.alignment.textRotation==0
+                    else:
+                        assert c.value.startswith(str(start)+'. HAFTADAN ÖNCEKİ HAFTALAR')
+                        assert c.value.endswith('BU LİSTEDE İMZALANMAZ')
+                        assert c.alignment.textRotation==(90 if (b-a+1)*layout.CLOSED_WIDTH_MM<32 else 0)
                     assert c.fill.fgColor.rgb.endswith(layout.EXAM_GRAY)
-                    assert c.alignment.textRotation==(90 if (b-a+1)*layout.CLOSED_WIDTH_MM<32 else 0)
                 assert ws.cell(7,1).value==1
                 assert ws.cell(7,3).value=='ÖĞRENCİ 0'
             opened.close()
