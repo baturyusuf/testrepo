@@ -36,10 +36,10 @@ jobs:
       - name: Python Excel regressions
         run: |
           python -m py_compile adaptive_layout.py web_bridge.py yoklama_olustur.py
+          python tests/test_range_compaction.py
+          python tests/test_compact_weeks.py
+          python tests/test_border_layout.py
+          node tests/test_compact_parity.cjs
           python tests/test_adaptive_layout.py
           python tests/test_start_week.py
           python tests/test_v11_baseline.py
-          python tests/test_border_layout.py
-          python tests/test_compact_weeks.py
-          python tests/test_range_compaction.py
-          node tests/test_compact_parity.cjs
