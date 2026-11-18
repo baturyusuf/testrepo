@@ -56,14 +56,17 @@ CLOSED_TEXT = "808080"
 CLOSED_TEXT_ON_BURGUNDY = "D9D9D9"
 CLOSED_VERTICAL_BELOW_MM = 32.0
 CLOSED_WIDTH_MM = 9.0  # Narrow physical mm width for each completed week
+COMPACT_CLOSED_WIDTH_MM = 26.0  # 4+ past weeks share one horizontal column
+COMPACT_CLOSED_MIN_WEEKS = 4
 
 
 @dataclass(frozen=True)
 class Group:
     week: int
-    kind: str             # week / exam
+    kind: str             # week / exam / closed
     label: str
-    span: int             # signature columns, or 1 for an exam
+    span: int             # signatures, exam or compact column
+    end_week: int | None = None
 
 
 def validate_settings(weeks, signatures, midterm, final):
@@ -81,16 +84,32 @@ def validate_settings(weeks, signatures, midterm, final):
 
 
 def groups_for_weeks(weeks, signatures, midterm, final, start_week=1):
-    groups = []
+    """Fold consecutive prior signature weeks only; exams retain their own columns."""
+    raw = []
     for week in range(1, weeks + 1):
         if week == midterm:
-            groups.append(Group(week, 'exam', f'VİZE SINAVI · {week}. HAFTA', 1))
+            raw.append(Group(week, 'exam', f'VİZE SINAVI · {week}. HAFTA', 1))
         elif week == final:
-            groups.append(Group(week, 'exam', f'FİNAL SINAVI · {week}. HAFTA', 1))
+            raw.append(Group(week, 'exam', f'FİNAL SINAVI · {week}. HAFTA', 1))
         else:
-            groups.append(Group(week, 'week', f'{week}. HAFTA', 1 if week < start_week else signatures))
+            raw.append(Group(week, 'week', f'{week}. HAFTA', 1 if week < start_week else signatures))
+    groups, index = [], 0
+    while index < len(raw):
+        group = raw[index]
+        if group.kind != 'week' or group.week >= start_week:
+            groups.append(group)
+            index += 1
+            continue
+        end = index + 1
+        while end < len(raw) and raw[end].kind == 'week' and raw[end].week < start_week:
+            end += 1
+        if end - index >= COMPACT_CLOSED_MIN_WEEKS:
+            first, last = raw[index].week, raw[end - 1].week
+            groups.append(Group(first, 'closed', f'{first}-{last} HAFTALAR', 1, last))
+        else:
+            groups.extend(raw[index:end])
+        index = end
     return groups
-
 
 
 def last_signature_week(weeks, midterm, final):
@@ -119,7 +138,13 @@ def validate_start_week(start_week, weeks, midterm, final):
 
 
 def is_closed(group, start_week):
-    return group.kind == 'week' and group.week < start_week
+    return group.kind == 'closed' or (group.kind == 'week' and group.week < start_week)
+
+
+def closed_group_width_mm(group, start_week):
+    if group.kind == 'closed':
+        return COMPACT_CLOSED_WIDTH_MM
+    return CLOSED_WIDTH_MM if is_closed(group, start_week) else 0.0
 
 
 def has_open_week(groups, start_week):
@@ -213,21 +238,21 @@ def page_plan(weeks, signatures, midterm, final, min_mark_mm=MARK_MIN_MM,
     dp = [None] * (n + 1)
     dp[n] = (0, 0, [])
     for start in range(n - 1, -1, -1):
-        active, closed = 0, 0
+        active, closed_mm = 0, 0
         best = None
         for end in range(start + 1, n + 1):
             group = all_groups[end - 1]
             if is_closed(group, start_week):
-                closed += 1
+                closed_mm += closed_group_width_mm(group, start_week) * group.span
             else:
                 active += group.span
-            occupied = active * min_mark_mm + closed * CLOSED_WIDTH_MM
+            occupied = active * min_mark_mm + closed_mm
             if occupied > available + 1e-9:
                 break
             remaining = dp[end]
             if remaining is None:
                 continue
-            weight = active + closed * CLOSED_WIDTH_MM / min_mark_mm
+            weight = active + closed_mm / min_mark_mm
             candidate = (remaining[0] + 1, remaining[1] + weight ** 2,
                          [all_groups[start:end]] + remaining[2])
             if best is None or candidate[:2] < best[:2]:
@@ -245,10 +270,10 @@ def mm_to_excel_chars(mm):
 
 def mark_width_mm(groups, min_mark_mm=MARK_MIN_MM, fixed_widths_mm=FIXED_MM, start_week=1):
     active = sum(g.span for g in groups if not is_closed(g, start_week))
-    closed = sum(g.span for g in groups if is_closed(g, start_week))
+    closed_mm = sum(g.span * closed_group_width_mm(g,start_week) for g in groups)
     if not active:
         raise ValueError('İmza atılacak hafta bulunamadı')
-    available = PRINTABLE_MM - sum(fixed_widths_mm) - closed * CLOSED_WIDTH_MM
+    available = PRINTABLE_MM - sum(fixed_widths_mm) - closed_mm
     value = min(max(MARK_MAX_MM, min_mark_mm), available / active)
     if value + 1e-7 < min_mark_mm:
         raise ValueError('İmza hücresi için yeterli genişlik yok')
@@ -333,7 +358,7 @@ def _num(value):
 
 
 def _name_for_sheet(groups, index):
-    start, end = groups[0].week, groups[-1].week
+    start, end = groups[0].week, (groups[-1].end_week or groups[-1].week)
     label = f'{start}-{end}. Haftalar' if start != end else f'{start}. Hafta'
     return f'{index:02d} - {label}'[:31]
 
@@ -379,7 +404,7 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
             ws.column_dimensions[get_column_letter(col)].width = mm_to_excel_chars(mm)
         col = 4
         for group in groups:
-            mm = CLOSED_WIDTH_MM if is_closed(group, start_week) else width
+            mm = closed_group_width_mm(group,start_week) if is_closed(group,start_week) else width
             for offset in range(group.span):
                 ws.column_dimensions[get_column_letter(col + offset)].width = mm_to_excel_chars(mm)
             col += group.span
@@ -393,7 +418,7 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
         # Physical-width-based metadata layout. Two equal-ish blocks are used only
         # when each has room for its label; otherwise use two full-width rows.
         physical_columns = list(fixed_widths) + [
-            CLOSED_WIDTH_MM if is_closed(g, start_week) else width
+            closed_group_width_mm(g,start_week) if is_closed(g,start_week) else width
             for g in groups for _ in range(g.span)
         ]
         table_mm = sum(physical_columns)
@@ -458,19 +483,21 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
             start=mark_col
             end=mark_col+g.span-1
             closed=is_closed(g,start_week)
-            if g.kind == 'week' and g.span == 1:
+            if g.kind in ('week','closed') and g.span == 1:
                 # Exactly one weekly signature: merge the week heading vertically
                 # across the two header rows; do not create a "1. İMZA" label.
                 ws.merge_cells(start_row=5,start_column=start,end_row=6,end_column=start)
             elif g.span > 1:
                 ws.merge_cells(start_row=5,start_column=start,end_row=5,end_column=end)
             c=ws.cell(5,start,g.label)
-            c.font=Font(name=font_family,size=font_pt(8 if g.span>1 else 7),bold=True,strike=True if closed else None,color=(CLOSED_TEXT_ON_BURGUNDY if closed else WHITE) if g.kind=='week' else TEXT)
-            c.fill=PatternFill('solid',fgColor=BURGUNDY if g.kind=='week' else EXAM_GRAY)
+            c.font=Font(name=font_family,size=font_pt(8 if g.span>1 else 7),bold=True,
+                        strike=(True if closed and g.kind=='week' else None),
+                        color=(WHITE if g.kind=='closed' else (CLOSED_TEXT_ON_BURGUNDY if closed else WHITE) if g.kind=='week' else TEXT))
+            c.fill=PatternFill('solid',fgColor=BURGUNDY if g.kind in ('week','closed') else EXAM_GRAY)
             c.alignment=Alignment(horizontal='center',vertical='center',wrap_text=True,shrink_to_fit=True)
             c.border=Border(left=hairline,right=hairline,bottom=hairline)
             for mark_i in range(g.span):
-                if g.kind == 'week' and g.span == 1:
+                if g.kind in ('week','closed') and g.span == 1:
                     continue
                 x=ws.cell(6,start+mark_i)
                 x.value=f'{mark_i+1}. İMZA' if g.kind=='week' else 'SINAV'
@@ -480,8 +507,9 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
                 x.border=Border(left=hairline,right=hairline,bottom=hairline)
             if g.kind == 'exam':
                 exam_columns.append(start)
-            pdf_groups.append({'week':g.week,'kind':g.kind,'label':g.label,
-                               'span':g.span, 'widthMm':CLOSED_WIDTH_MM if closed else width})
+            pdf_groups.append({'week':g.week,'endWeek':g.end_week or g.week,'kind':g.kind,
+                                'label':g.label,'span':g.span,
+                                'widthMm':closed_group_width_mm(g,start_week) if closed else width})
             mark_col=end+1
         for row in range(HEADER_ROWS+1,last_row+1):
             ws.row_dimensions[row].height=STUDENT_HEIGHT_PT
@@ -498,14 +526,21 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
                 pt = name_font_sizes[idx] if col == 3 and idx < total_students else (font_size_pt if col == 3 else max(6,font_size_pt-1))
                 c.font=Font(name='Aptos Narrow' if col==3 and font_family=='Aptos' else font_family,size=pt,bold=(col==3),color=TEXT)
 
-        # One merged block per closed run and per physical A4 page, including empty rows.
-        # The planner and the original row/column dimensions are never recalculated.
+        # Horizontal gray summary for four or more contiguous prior weeks.
+        group_starts, column = {}, 4
+        for group in groups:
+            group_starts[column] = group
+            column += group.span
         for first,last in closed_runs(groups,start_week):
-            vertical=(last-first+1)*CLOSED_WIDTH_MM<CLOSED_VERTICAL_BELOW_MM
+            compact_group = group_starts.get(first)
+            compact = compact_group is not None and compact_group.kind == 'closed'
+            vertical = not compact and (last-first+1)*CLOSED_WIDTH_MM<CLOSED_VERTICAL_BELOW_MM
+            caption = (f'{compact_group.week}-{compact_group.end_week} arasındaki haftalar'
+                       '\n' 'bu belgede imzalanamaz') if compact else closed_label(start_week,vertical)
             for page in range(physical_pages):
                 top=HEADER_ROWS+1+page*STUDENTS_PER_PAGE
-                c=ws.cell(top,first,closed_label(start_week,vertical))
-                c.font=Font(name=font_family,size=font_size_pt if vertical else font_size_pt*1.25,
+                c=ws.cell(top,first,caption)
+                c.font=Font(name=font_family,size=font_size_pt if (vertical or compact) else font_size_pt*1.25,
                             bold=True,color=TEXT)
                 c.fill=PatternFill('solid',fgColor=EXAM_GRAY)
                 c.border=Border(left=hairline,right=hairline,top=hairline,bottom=hairline)
@@ -533,7 +568,7 @@ def build_workbook(students, department, course, instructor, title, weeks, signa
             'fontSizePt':font_size_pt,'fontFamily':font_family,
             'compactMeta':compact_meta,
             'printableWidthMm':PRINTABLE_MM,'totalWidthMm':round(sum(physical_columns),3),
-            'weekStart':groups[0].week,'weekEnd':groups[-1].week,
+            'weekStart':groups[0].week,'weekEnd':groups[-1].end_week or groups[-1].week,
             'startWeek':start_week,'totalSections':total_segments,
         })
     return wb,layouts,blank
