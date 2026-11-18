@@ -38,8 +38,12 @@ for(let start=2;start<=15;start++){
  const pages=H.paperLayout(...settings,start);
  assert(pages.every(p=>p.totalWidthMm<=289.005));
  assert(pages.flatMap(p=>p.groups).every(g=>
-   g.kind==='exam'||g.week>=start ? g.widthMm>=15 : g.widthMm===9));
+   g.kind==='exam'||(g.kind==='week'&&g.week>=start) ? g.widthMm>=15 :
+    g.widthMm===(g.kind==='closed'?26:9)));
  assert(pages.every(p=>p.groups.length>0));
 }
+const compact9=H.paperLayout(...settings,9).flatMap(p=>p.groups);
+assert(compact9.some(g=>g.kind==='closed'&&g.week===1&&g.endWeek===7&&g.span===1&&g.widthMm===26));
+assert(compact9.some(g=>g.kind==='exam'&&g.week===8));
 assert.deepEqual(H.paperLayout(...settings),H.paperLayout(...settings,1));
 console.log('v13 compact week renderer and A4 capacity: OK');
